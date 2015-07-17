@@ -1,0 +1,10 @@
+{
+	"domain_root" : "http://localhost",
+	"base_uri" : "/cumulus/",
+	"test" : {
+		"uris" : [
+			"myfile",
+			"by-name/chose"
+		]
+	}
+}

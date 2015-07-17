@@ -1,11 +1,13 @@
 <?php
 /**
- * Webservice - accepte GET, PUT, POST, DELETE, OPTIONS
- *
- *
+ * Point d'entrée (bootstrap) du service REST Cumulus
+ * 
+ * Toutes les requêtes doivent être redirigées vers ce fichier; un .htaccess est
+ * fourni à cet effet pour Apache
  */
 
-require 'Cumulus.php';
+require 'CumulusService.php';
 
-// initializing service
-$svc = new Cumulus();
+// Initialisation et exécution du service
+$svc = new CumulusService();
+$svc->run();
