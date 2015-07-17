@@ -1,0 +1,10 @@
+{
+	"baseurl" : "/web/cumulus/index.php/",
+	"db" : {
+		"host" : "localhost",
+		"port" : "3306",
+		"dbname" : "cumulus",
+		"username" : "",
+		"password" : ""
+	}
+}
