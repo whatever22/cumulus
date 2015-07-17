@@ -20,11 +20,11 @@ class CumulusService {
 	/** Ressources (éléments d'URI) */
 	protected $resources = array();
 
-	/** Paramètres reçus */
+	/** Paramètres de requête (GET ou POST) */
 	protected $params = array();
 
-	/** Clef reçue */
-	protected $key;
+	/** Racine du domaine (pour construire des URIs) */
+	protected $domainRoot;
 
 	/** URL de base pour parser les éléments (ressources) */
 	protected $baseURI;
@@ -44,10 +44,13 @@ class CumulusService {
 		$this->verb = $_SERVER['REQUEST_METHOD'];
 		//echo "Method: " . $this->verb . PHP_EOL;
 
-		// @TODO read from config
+		// config serveur
+		$this->domainRoot = $this->config['domain_root'];
 		$this->baseURI = $this->config['base_uri'];
+		echo "Domain root: " . $this->domainRoot . PHP_EOL;
 		echo "Base URI: " . $this->baseURI . PHP_EOL;
 
+		// initialisation
 		$this->getResources();
 		$this->getParams();
 		print_r($this->resources);
@@ -84,145 +87,282 @@ class CumulusService {
 		}
 	}
 
-	/** Compare l'URI de la requête à l'URI de base pour extraire les éléments d'URI */
+	/**
+	 * Compare l'URI de la requête à l'URI de base pour extraire les éléments d'URI
+	 */
 	protected function getResources() {
 		$uri = $_SERVER['REQUEST_URI'];
-		//echo "URI: " . $uri . PHP_EOL;
+		// découpage de l'URI
 		if ((strlen($uri) > strlen($this->baseURI)) && (strpos($uri, $this->baseURI) !== false)) {
-			//echo "URI plus!" . PHP_EOL;
 			$baseUriLength = strlen($this->baseURI);
-			$resources = substr($uri, $baseUriLength, strpos($uri, '?') - $baseUriLength);
-			//echo "Ressources: $resources" . PHP_EOL;
-			$this->resources = explode("/", $resources);
+			$posQM = strpos($uri, '?');
+			if ($posQM != false) {
+				$resourcesString = substr($uri, $baseUriLength, $posQM - $baseUriLength);
+			} else {
+				$resourcesString = substr($uri, $baseUriLength);
+			}
+			//echo "Ressources: $resourcesString" . PHP_EOL;
+			$this->resources = explode("/", $resourcesString);
 		}
 	}
 
-	/** Récupère les paramètres GET ou POST de la requête */
+	/**
+	 * Récupère les paramètres GET ou POST de la requête
+	 */
 	protected function getParams() {
 		$this->params = $_REQUEST;
 	}
 
 	/**
-	 * Detects which way the user wants to retreive file(s)
+	 * Recherche le paramètre $name dans $this->params; s'il est défini (même
+	 * vide), renvoie sa valeur; s'il n'est pas défini, retourne $default
+	 */
+	protected function getParam($name, $default=false) {
+		if (isset($this->params[$name])) {
+			return $this->params[$name];
+		} else {
+			return $default;
+		}
+	}
+
+	/**
+	 * Obtenir un fichier : plusieurs manières dépendamment de l'URI
 	 */
 	protected function get() {
+		// il faut au moins une ressource : clef ou méthode
 		if (empty($this->resources[0])) {
 			http_response_code(404);
 			return false;
 		}
-		$res1 = $this->resources[0];
-		echo "Get param 1: $res1" . PHP_EOL;
 
-		// is it a raw GET or a search ?
-		switch($res1) {
-			case "by-keyword":
-				$this->getByKeyword();
-				break;
+		$firstResource = $this->resources[0];
+		// mode de récupération du/des fichiers
+		switch($firstResource) {
 			case "by-name":
 				$this->getByName();
+				break;
+			case "by-path":
+				$this->getByPath();
+				break;
+			case "by-keywords":
+				$this->getByKeywords();
+				break;
+			case "by-user":
+				$this->getByUser();
+				break;
+			case "by-group":
+				$this->getByGroup();
+				break;
+			case "by-date":
+				$this->getByDate();
+				break;
+			case "by-mimetype":
+				$this->getByMimetype();
 				break;
 			case "search":
 				$this->search();
 				break;
 			default:
-				$this->getByKey($res1);
+				$this->getByKey();
 		}
-	}
 
-	/** Retreives a file from the stock and sends it */
-	protected function getByKey($key) {
-		$q = "SELECT * FROM stor WHERE k='$key'";
-		// @TODO access rights
-		// ...
-		$result = $this->db->query($q)->fetchAll(PDO::FETCH_ASSOC);
-		if (empty($result)) {
-			echo "key not found";
-			http_response_code(404);
-			return false;
-		}
-		echo json_encode($result);
-		// @TODO send file contents to stdout
+		// réponse positive par défaut;
+		http_response_code(200);
 	}
 
 	/**
-	 * Searches (public) files by name and sends a list
+	 * GET http://tb.org/cumulus.php/chemin/arbitraire/clef
+	 * 
+	 * Récupère le fichier clef contenu dans le répertoire /chemin/arbitraire
+	 * (déclenche son téléchargement)
+	 */
+	protected function getByKey() {
+		$key = array_pop($this->resources);
+		$path = $this->resources;
+
+		echo "getByKey : [$path] [$key]\n";
+
+		return $this->lib->getByKey($path, $key);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/by-name/compte rendu
+	 * GET http://tb.org/cumulus.php/by-name/compte rendu?LIKE (par défaut)
+	 * GET http://tb.org/cumulus.php/by-name/compte rendu?STRICT
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) correspondant
+	 * au nom ou à la / aux portion(s) de nom fournie(s), quels que soient leurs
+	 * emplacements
 	 * @TODO paginate, sort and limit
 	 */
 	protected function getByName() {
-		if (empty($this->params[1])) {
-			http_response_code(404);
-			echo "no name specified";
-			return false;
+		$name = $this->resources[1];
+		$strict = false;
+		if ($this->getParam('STRICT') !== false) {
+			$strict = true;
 		}
-		$name = $this->params[1];
 
-		$q = "SELECT * FROM stor WHERE name LIKE '%$name%'";
-		// @TODO access rights
-		// ...
-		$result = $this->db->query($q)->fetchAll(PDO::FETCH_ASSOC);
-		if (empty($result)) {
-			echo "no results";
-			http_response_code(404);
-			return false;
-		}
-		echo json_encode($result);
-		// @TODO generate proper list with links
+		echo "getByName : [$name]\n";
+		var_dump($strict);
+
+		return $this->lib->getByName($name, $strict);
 	}
 
 	/**
-	 * GET http://a.org/stor.php/by-keywords/foo
-	 * GET http://a.org/stor.php/by-keywords/foo,bar,couscous
- 	 * GET http://a.org/stor.php/by-keywords/foo,bar,couscous/AND (default)
- 	 * GET http://a.org/stor.php/by-keywords/foo,bar,couscous/OR
- 	 *
-	 * Searches (public) files by keywords and sends a list
-	 * @TODO paginate, sort and limit
+	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin
+	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans un dossier dont le chemin est /mon/super/chemin
+	 * 
+	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin?R
+	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans un dossier dont le chemin est /mon/super/chemin ou un sous-dossier de celui-ci
+	 */
+	protected function getByPath() {
+		array_shift($this->resources);
+		$path = implode('/', $this->resources);
+		$recursive = false;
+		if ($this->getParam('R') !== false) {
+			$recursive = true;
+		}
+
+		echo "getByPath : [$path]\n";
+		var_dump($recursive);
+
+		return $this->lib->getByPath($path, $recursive);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/by-keywords/foo
+	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous
+	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous?AND (par défaut)
+	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous?OR
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) correspondant à un ou plusieurs mots-clefs
 	 */
 	protected function getByKeywords() {
-		// keywords
-		if (empty($this->params[1])) {
-			http_response_code(404);
-			echo "no keyword specified";
-			return false;
-		}
-		$keywords = $this->params[1];
-		$keywords = explode(",", $keywords);
-		// clause mode (OR or AND)
+		$keywords = $this->resources[1];
 		$mode = "AND";
-		if (! empty($this->params[1])) {
-			http_response_code(404);
-			echo "no keyword specified";
-			return false;
+		if ($this->getParam('OR') !== false) {
+			$mode = "OR";
 		}
-		$clause = implode(" OR ");
 
-		$q = "SELECT * FROM stor WHERE name LIKE '%$name%'";
-		// @TODO access rights
-		// ...
-		$result = $this->db->query($q)->fetchAll(PDO::FETCH_ASSOC);
-		if (empty($result)) {
-			echo "no results";
-			http_response_code(404);
-			return false;
-		}
-		echo json_encode($result);
-		// @TODO generate proper list with links
+		echo "getByKeywords : [$keywords] [$mode]\n";
+
+		return $this->lib->getByKeywords($path, $mode);
 	}
 
-	/** Adds a file to the stock and sends the random generated key associated to it */
+	/**
+	 * GET http://tb.org/cumulus.php/by-user/jean-bernard@tela-botanica.org
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant à l'utilisateur jean-bernard@tela-botanica.org
+	 */
+	protected function getByUser() {
+		$user = $this->resources[1];
+
+		echo "getByUser : [$user]\n";
+
+		return $this->lib->getByUser($user);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/by-group/botanique-à-bort-les-orgues
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant au groupe "botanique-à-bort-les-orgues"
+	 */
+	protected function getByGroup() {
+		$group = $this->resources[1];
+
+		echo "getByGroup : [$group]\n";
+
+		return $this->lib->getByGroup($group);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/by-mimetype/image/png
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) ayant un type MIME "image/png"
+	 */
+	protected function getByMimetype() {
+		$mimetype = $this->resources[1];
+
+		echo "getByMimetype : [$mimetype]\n";
+
+		return $this->lib->getByMimetype($mimetype);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/by-date/2015-02-04
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant exactement du 04/02/2015
+	 * 
+	 * GET http://tb.org/cumulus.php/by-date/2015-02-04?BEFORE
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'avant le 04/02/2015 (exclu)
+	 * 
+	 * GET http://tb.org/cumulus.php/by-date/2015-02-04?AFTER
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'après 04/02/2015 (exclu)
+	 * 
+	 * GET http://tb.org/cumulus.php/by-date/2014-07-13/2015-02-04
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'entre le 13/07/2014 et le 04/02/2015
+	 */
+	protected function getByDate() {
+		// une ou deux dates fournies ?
+		$date1 = $this->resources[1];
+		$date2 = null;
+		if (! empty($this->resources[2])) {
+			$date2 = $this->resources[2];
+		}
+		// opérateur de comparaison si une seule date fournie
+		$operator = "=";
+		if ($date2 === null) {
+			if ($this->getParam('BEFORE') !== false) {
+				$operator = "<";
+			} elseif ($this->getParam('AFTER') !== false) {
+				$operator = ">";
+			}
+		}
+
+		echo "getByDate : [$date1] [$date2] [$operator]\n";
+
+		return $this->lib->getByDate($date1, $date2, $operator);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/search/foo,bar
+	 * Recherche floue parmi les noms et les mots-clefs
+	 * 
+	 * GET http://tb.org/cumulus.php/search?keywords=foo,bar&user=jean-bernard@tela-botanica.org&date=...
+	 * Recherche avancée
+	 */
+	protected function search() {
+		$pattern = null;
+		if (! empty($this->resources[1])) {
+			$pattern = $this->resources[1];
+		}
+
+		echo "search : [$pattern]\n";
+		var_dump($this->params);
+
+		return $this->lib->getByKeywords($pattern, $this->params);
+	}
+
+	/**
+	 * Ajoute un fichier et renvoie sa clef et ses attributs
+	 */
 	protected function put() {
-		//$key = sha2(microtime()); // @TODO test reliability
-		$key = md5(microtime());
-		echo $key;
 	}
 
-	/** Replaces an existing file with a new one, using the key */
+	/**
+	 * Écrase ou modifie les attributs d'un fichier existant
+	 */
 	protected function post() {
-		if (empty($this->params[0])) {
-			http_response_code(403);
-			echo "missing key" . PHP_EOL;
-			return false;
-		}
-		$key = $this->params[0];
+	}
+
+	/**
+	 * Supprime un fichier
+	 */
+	protected function delete() {
+	}
+
+	/**
+	 * Renvoie les attributs d'un fichier, mais pas le fichier lui-même
+	 */
+	protected function options() {
 	}
 }
