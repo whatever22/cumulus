@@ -13,6 +13,10 @@ class Cumulus {
 	protected $config = array();
 	public static $CHEMIN_CONFIG = "config/config.json";
 
+	/** Implémentation de la lib */
+	protected $adapter;
+	public static $DEFAULT_ADAPTER = "tb";
+
 	public function __construct() {
 		// config
 		if (file_exists(self::$CHEMIN_CONFIG)) {

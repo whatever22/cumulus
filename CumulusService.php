@@ -82,9 +82,32 @@ class CumulusService {
 				$this->options();
 				break;
 			default:
-				http_response_code(500);
-				echo "unrecognized method: $this->verb" . PHP_EOL;
+				$this->sendError("unrecognized method: $this->verb");
 		}
+	}
+
+	/**
+	 * Envoie un message en JSON indiquant un succès et sort du programme
+	 * @param type $json le message
+	 * @param type $code par défaut 200 (HTTP OK)
+	 */
+	protected function sendJson($json, $code=200) {
+		header('Content-type: application/json');
+		http_response_code($code);
+		echo json_encode($json);
+		exit;
+	}
+
+	/**
+	 * Envoie un message en JSON indiquant une erreur et sort du programme
+	 * @param type $error la chaîne expliquant la raison de l'erreur
+	 * @param type $code par défaut 400 (HTTP Bad Request)
+	 */
+	protected function sendError($error, $code=400) {
+		header('Content-type: application/json');
+		http_response_code($code);
+		echo json_encode(array("error" => $error));
+		exit;
 	}
 
 	/**
@@ -117,7 +140,7 @@ class CumulusService {
 	 * Recherche le paramètre $name dans $this->params; s'il est défini (même
 	 * vide), renvoie sa valeur; s'il n'est pas défini, retourne $default
 	 */
-	protected function getParam($name, $default=false) {
+	protected function getParam($name, $default=null) {
 		if (isset($this->params[$name])) {
 			return $this->params[$name];
 		} else {
@@ -178,7 +201,7 @@ class CumulusService {
 	 */
 	protected function getByKey() {
 		$key = array_pop($this->resources);
-		$path = $this->resources;
+		$path = implode('/', $this->resources);
 
 		echo "getByKey : [$path] [$key]\n";
 
@@ -198,7 +221,7 @@ class CumulusService {
 	protected function getByName() {
 		$name = $this->resources[1];
 		$strict = false;
-		if ($this->getParam('STRICT') !== false) {
+		if ($this->getParam('STRICT') !== null) {
 			$strict = true;
 		}
 
@@ -219,7 +242,7 @@ class CumulusService {
 		array_shift($this->resources);
 		$path = implode('/', $this->resources);
 		$recursive = false;
-		if ($this->getParam('R') !== false) {
+		if ($this->getParam('R') !== null) {
 			$recursive = true;
 		}
 
@@ -240,13 +263,13 @@ class CumulusService {
 	protected function getByKeywords() {
 		$keywords = $this->resources[1];
 		$mode = "AND";
-		if ($this->getParam('OR') !== false) {
+		if ($this->getParam('OR') !== null) {
 			$mode = "OR";
 		}
 
 		echo "getByKeywords : [$keywords] [$mode]\n";
 
-		return $this->lib->getByKeywords($path, $mode);
+		return $this->lib->getByKeywords($keywords, $mode);
 	}
 
 	/**
@@ -311,9 +334,9 @@ class CumulusService {
 		// opérateur de comparaison si une seule date fournie
 		$operator = "=";
 		if ($date2 === null) {
-			if ($this->getParam('BEFORE') !== false) {
+			if ($this->getParam('BEFORE') !== null) {
 				$operator = "<";
-			} elseif ($this->getParam('AFTER') !== false) {
+			} elseif ($this->getParam('AFTER') !== null) {
 				$operator = ">";
 			}
 		}
@@ -332,37 +355,81 @@ class CumulusService {
 	 */
 	protected function search() {
 		$pattern = null;
+		$searchParams = array();
 		if (! empty($this->resources[1])) {
 			$pattern = $this->resources[1];
+		} else {
+			$searchParams = $this->params;
 		}
 
-		echo "search : [$pattern]\n";
-		var_dump($this->params);
+		echo "search : [$pattern]\n"; // il est à Dakar !
+		var_dump($searchParams);
 
-		return $this->lib->getByKeywords($pattern, $this->params);
+		return $this->lib->search($pattern, $searchParams);
+	}
+
+	/**
+	 * Écrase ou modifie les attributs d'un fichier existant, et renvoie les
+	 * attributs
+	 */
+	protected function put() {
+		$key = array_pop($this->resources);
+		$path = implode('/', $this->resources);
+		$file = null;
+		$keywords = $this->getParam('keywords');
+		$meta = $this->getParam('meta');
+
+		if (! empty($_FILES['file'])) {
+			// envoi avec multipart/form-data
+			$file = $_FILES['file'];
+		} // sinon envoi en flux, contenu du fichier dans le corps de la requête
+
+		echo "PUT: [$file] [$path] [$key] [$keywords] [$meta]";
+
+		$this->lib->updateByKey($file, $path, $key, $keywords, $meta);
 	}
 
 	/**
 	 * Ajoute un fichier et renvoie sa clef et ses attributs
 	 */
-	protected function put() {
-	}
-
-	/**
-	 * Écrase ou modifie les attributs d'un fichier existant
-	 */
 	protected function post() {
+		$path = implode('/', $this->resources);
+		$file = null;
+		$key = $this->getParam('key');
+		$keywords = $this->getParam('keywords');
+		$meta = $this->getParam('meta');
+
+		if (! empty($_FILES['file'])) {
+			// envoi avec multipart/form-data
+			$file = $_FILES['file'];
+		} // sinon envoi en flux (contenu du fichier dans le corps de la requête)
+
+		echo "POST: [$file] [$path] [$key] [$keywords] [$meta]";
+
+		$this->lib->addFile($file, $path, $key, $keywords, $meta);
 	}
 
 	/**
-	 * Supprime un fichier
+	 * Supprime un fichier par sa clef, ou par sa clef plus son chemin
 	 */
 	protected function delete() {
+		$key = array_pop($this->resources);
+		$path = implode('/', $this->resources);
+
+		echo "delete : [$path] [$key]\n";
+
+		return $this->lib->deleteByKey($path, $key);
 	}
 
 	/**
 	 * Renvoie les attributs d'un fichier, mais pas le fichier lui-même
 	 */
 	protected function options() {
+		$key = array_pop($this->resources);
+		$path = implode('/', $this->resources);
+
+		echo "options : [$path] [$key]\n";
+
+		return $this->lib->getAttributesByKey($path, $key);
 	}
 }
