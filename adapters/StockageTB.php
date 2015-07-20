@@ -16,7 +16,7 @@ class StockageTB implements CumulusInterface {
 		// copie de la config
 		$this->config = $config;
 		// base de données
-		$DB = $this->config['adapters.StockageTB.db'];
+		$DB = $this->config['adapters']['StockageTB']['db'];
 		$dsn = "mysql:host=" . $DB['host'] . ";dbname=" . $DB['dbname'] . ";port=" . $DB['port'];
 		$this->db = new PDO($dsn, $DB['username'], $DB['password']);
 	}
@@ -26,8 +26,27 @@ class StockageTB implements CumulusInterface {
 	 * @param type $path
 	 * @param type $key
 	 */
-	public function getByKey($path, $key ) {
-		
+	public function getByKey($path, $key) {
+		if (empty($key)) {
+			return false;
+		}
+		// clauses
+		$clauses = array();
+		$clauses[] = "fkey = '$key'";
+		if (! empty($path)) {
+			$clauses[] = "path = '/$path'";
+		}
+		$clausesString = implode(" AND ", $clauses);
+		//requête
+		$q = "SELECT * FROM cumulus_files WHERE $clausesString LIMIT 1";
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetchAll();
+			if (! empty($data[0])) {
+				return $data[0];
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -131,5 +150,7 @@ class StockageTB implements CumulusInterface {
 	 * @param type $path
 	 * @param type $key
 	 */
-	public function getAttributesByKey($path, $key ) {}
+	public function getAttributesByKey($path, $key ) {
+		return $this->getByKey($path, $key);
+	}
 }

@@ -203,9 +203,14 @@ class CumulusService {
 		$key = array_pop($this->resources);
 		$path = implode('/', $this->resources);
 
-		echo "getByKey : [$path] [$key]\n";
+		//echo "getByKey : [$path] [$key]\n";
+		$file = $this->lib->getByKey($path, $key);
 
-		return $this->lib->getByKey($path, $key);
+		if ($file == false) {
+			$this->sendError("file not found", 404);
+		} else {
+			$this->sendJson($file);
+		}
 	}
 
 	/**
@@ -430,8 +435,13 @@ class CumulusService {
 		$key = array_pop($this->resources);
 		$path = implode('/', $this->resources);
 
-		echo "options : [$path] [$key]\n";
+		//echo "options : [$path] [$key]\n";
+		$file = $this->lib->getAttributesByKey($path, $key);
 
-		return $this->lib->getAttributesByKey($path, $key);
+		if ($file == false) {
+			$this->sendError("file not found", 404);
+		} else {
+			$this->sendJson($file);
+		}
 	}
 }
