@@ -1,10 +1,14 @@
 {
-	"db" : {
-		"host" : "localhost",
-		"port" : "3306",
-		"dbname" : "cumulus",
-		"username" : "",
-		"password" : ""
-	},
-	"adapter" : "StockageTB"
+	"adapter": "StockageTB",
+	"adapters": {
+		"StockageTB": {
+			"db": {
+				"host": "localhost",
+				"port": "3306",
+				"dbname": "cumulus",
+				"username": "",
+				"password": ""
+			}
+		}
+	}
 }
