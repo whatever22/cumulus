@@ -5,5 +5,6 @@
 		"dbname" : "cumulus",
 		"username" : "",
 		"password" : ""
-	}
+	},
+	"adapter" : "StockageTB"
 }

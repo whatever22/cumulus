@@ -354,18 +354,20 @@ class CumulusService {
 	 * Recherche avancée
 	 */
 	protected function search() {
-		$pattern = null;
-		$searchParams = array();
+		$searchParams = array(
+			"mode" => "OR"
+		);
 		if (! empty($this->resources[1])) {
-			$pattern = $this->resources[1];
+			$searchParams['keywords'] = $this->resources[1];
+			$searchParams['name'] = $this->resources[1];
 		} else {
 			$searchParams = $this->params;
 		}
 
-		echo "search : [$pattern]\n"; // il est à Dakar !
+		echo "search :\n";
 		var_dump($searchParams);
 
-		return $this->lib->search($pattern, $searchParams);
+		return $this->lib->search($searchParams);
 	}
 
 	/**
