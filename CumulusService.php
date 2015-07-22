@@ -47,14 +47,14 @@ class CumulusService {
 		// config serveur
 		$this->domainRoot = $this->config['domain_root'];
 		$this->baseURI = $this->config['base_uri'];
-		echo "Domain root: " . $this->domainRoot . PHP_EOL;
-		echo "Base URI: " . $this->baseURI . PHP_EOL;
+		//echo "Domain root: " . $this->domainRoot . PHP_EOL;
+		//echo "Base URI: " . $this->baseURI . PHP_EOL;
 
 		// initialisation
 		$this->getResources();
 		$this->getParams();
-		print_r($this->resources);
-		print_r($this->params);
+		//print_r($this->resources);
+		//print_r($this->params);
 
 		$this->init();
 	}
@@ -111,19 +111,86 @@ class CumulusService {
 	}
 
 	/**
+	 * Renvoie plusieurs résultats $results dans un objet JSON, en ajoutant un
+	 * lien de téléchargement
+	 * @param type $results
+	 * @param type $errorMessage
+	 * @param type $errorCode
+	 */
+	protected function sendMultipleResults($results, $errorMessage="no results", $errorCode=404) {
+		if ($results == false) {
+			$this->sendError($errorMessage, $errorCode);
+		} else {
+			// création des liens de téléchargement
+			$this->buildLinks($results);
+			$this->sendJson(
+				array(
+					"count" => count($results),
+					"results" => $results
+				)
+			);
+		}
+	}
+
+	/**
+	 * Ajoutant un lien de téléchargement "href" à chaque fichier du jeu de
+	 * données
+	 * @param type $results
+	 */
+	protected function buildLinks(&$results) {
+		foreach ($results as &$r) {
+			$r['href'] = $this->buildLink($r['fkey'], $r['path']);
+		}
+	}
+
+	/**
+	 * Retourne un lien de téléchargement relatif à l'URL de base du service,
+	 * pour une clef de fichier et un chemin données
+	 */
+	protected function buildLink($key, $path="/") {
+		if (empty($key)) {
+			return false;
+		}
+		$href = $this->domainRoot . $this->baseURI . $path . "/" . $key;
+		return $href;
+	}
+
+	/**
+	 * Envoie le fichier $file au client, en forçant le téléchargement
+	 * @param type $file
+	 */
+	protected function sendFile($file, $mimetype='application/octet-stream') {
+		if (! file_exists($file)) {
+			$this->sendError("file does not exist in storage");
+		}
+		header('Content-Type: ' . $mimetype);
+		header('Content-Disposition: attachment');
+		header('Expires: 0');
+		header('Cache-Control: must-revalidate');
+		header('Pragma: public');
+		header('Content-Length: ' . filesize($file));
+		// envoi du contenu
+		readfile($file);
+		exit;
+	}
+
+	/**
 	 * Compare l'URI de la requête à l'URI de base pour extraire les éléments d'URI
 	 */
 	protected function getResources() {
 		$uri = $_SERVER['REQUEST_URI'];
 		// découpage de l'URI
-		if ((strlen($uri) > strlen($this->baseURI)) && (strpos($uri, $this->baseURI) !== false)) {
-			$baseUriLength = strlen($this->baseURI);
+		$baseURI = $this->baseURI . "/";
+		if ((strlen($uri) > strlen($baseURI)) && (strpos($uri, $baseURI) !== false)) {
+			$baseUriLength = strlen($baseURI);
 			$posQM = strpos($uri, '?');
 			if ($posQM != false) {
 				$resourcesString = substr($uri, $baseUriLength, $posQM - $baseUriLength);
 			} else {
 				$resourcesString = substr($uri, $baseUriLength);
 			}
+			// décodage des caractères spéciaux
+			$resourcesString = urldecode($resourcesString);
 			//echo "Ressources: $resourcesString" . PHP_EOL;
 			$this->resources = explode("/", $resourcesString);
 		}
@@ -209,7 +276,7 @@ class CumulusService {
 		if ($file == false) {
 			$this->sendError("file not found", 404);
 		} else {
-			$this->sendJson($file);
+			$this->sendFile($file['disk_path'], $file['mimetype']);
 		}
 	}
 
@@ -230,10 +297,11 @@ class CumulusService {
 			$strict = true;
 		}
 
-		echo "getByName : [$name]\n";
-		var_dump($strict);
+		//echo "getByName : [$name]\n";
+		//var_dump($strict);
+		$files = $this->lib->getByName($name, $strict);
 
-		return $this->lib->getByName($name, $strict);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
@@ -437,6 +505,7 @@ class CumulusService {
 
 		//echo "options : [$path] [$key]\n";
 		$file = $this->lib->getAttributesByKey($path, $key);
+		$file['href'] = $this->buildLink($file['fkey'], $file['path']);
 
 		if ($file == false) {
 			$this->sendError("file not found", 404);

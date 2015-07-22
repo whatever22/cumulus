@@ -19,6 +19,8 @@ class StockageTB implements CumulusInterface {
 		$DB = $this->config['adapters']['StockageTB']['db'];
 		$dsn = "mysql:host=" . $DB['host'] . ";dbname=" . $DB['dbname'] . ";port=" . $DB['port'];
 		$this->db = new PDO($dsn, $DB['username'], $DB['password']);
+		// pour ne pas récupérer les valeurs en double (indices numériques + texte)
+		$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 	}
 
 	/**
@@ -55,7 +57,25 @@ class StockageTB implements CumulusInterface {
 	 * @param type $name
 	 * @param type $strict
 	 */
-	public function getByName($name, $strict=false ) {}
+	public function getByName($name, $strict=false ) {
+		if (empty($name)) {
+			return false;
+		}
+		// clauses
+		$clause = "original_name = '$name'";
+		if ($strict === false) {
+			$clause = "original_name LIKE '%" . str_replace('*', '%', $name) . "%'";
+		}
+		//requête
+		$q = "SELECT * FROM cumulus_files WHERE $clause";
+		//echo "QUERY : $q\n";
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetchAll();
+			return $data;
+		}
+		return false;
+	}
 
 	/**
 	 * Retourne une liste de fichiers se trouvant dans le répertoire $path; si
