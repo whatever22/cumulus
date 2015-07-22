@@ -111,8 +111,8 @@ class Cumulus implements CumulusInterface {
 	 * @param type $date2
 	 * @param type $operator
 	 */
-	public function getByDate($date1, $date2, $operator="=") {
-		return $this->adapter->getByDate($date1, $date2, $operator);
+	public function getByDate($dateColumn, $date1, $date2, $operator="=") {
+		return $this->adapter->getByDate($dateColumn, $date1, $date2, $operator);
 	}
 
 	/**
@@ -123,7 +123,7 @@ class Cumulus implements CumulusInterface {
 	 * @param type $searchParams
 	 */
 	public function search($searchParams=array()) {
-		return $this->adapter->search($searchParams);
+		return $this->adapter->search($searchParams, $mode);
 	}
 
 	/**

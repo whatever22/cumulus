@@ -5,6 +5,9 @@
  */
 interface CumulusInterface {
 
+	const COLUMN_LAST_MODIFICATION_DATE = "last_modification_date";
+	const COLUMN_CREATION_DATE = "creation_date";
+
 	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
 	 * @param type $path
@@ -58,15 +61,15 @@ interface CumulusInterface {
 	public function getByMimetype($mimetype);
 
 	/**
-	 * Retourne une liste de fichiers en fonction de leur date (@TODO de création
-	 * ou de modification ?) : si $date1 et $date2 sont spécifiées, renverra les
-	 * fichiers dont la date se trouve entre les deux; sinon, comparera à $date1
-	 * en fonction de $operator ("=", "<" ou ">")
+	 * Retourne une liste de fichiers en fonction de leur date de création ou de
+	 * modification ($dateColumn) : si $date1 et $date2 sont spécifiées,
+	 * renverra les fichiers dont la date se trouve entre les deux; sinon,
+	 * comparera à $date1 en fonction de $operator ("=", "<" ou ">")
 	 * @param type $date1
 	 * @param type $date2
 	 * @param type $operator
 	 */
-	public function getByDate($date1, $date2, $operator="=");
+	public function getByDate($dateColumn, $date1, $date2, $operator="=");
 
 	/**
 	 * Recherche avancée - retourne une liste de fichiers correspondant aux

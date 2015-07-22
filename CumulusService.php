@@ -291,7 +291,7 @@ class CumulusService {
 	 * @TODO paginate, sort and limit
 	 */
 	protected function getByName() {
-		$name = $this->resources[1];
+		$name = isset($this->resources[1]) ? $this->resources[1] : null;
 		$strict = false;
 		if ($this->getParam('STRICT') !== null) {
 			$strict = true;
@@ -306,23 +306,26 @@ class CumulusService {
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin
-	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans un dossier dont le chemin est /mon/super/chemin
+	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
+	 * un dossier dont le chemin est /mon/super/chemin
 	 * 
 	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin?R
-	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans un dossier dont le chemin est /mon/super/chemin ou un sous-dossier de celui-ci
+	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
+	 * un dossier dont le chemin est /mon/super/chemin ou un sous-dossier
 	 */
 	protected function getByPath() {
 		array_shift($this->resources);
-		$path = implode('/', $this->resources);
+		$path = '/' . implode('/', $this->resources);
 		$recursive = false;
 		if ($this->getParam('R') !== null) {
 			$recursive = true;
 		}
 
-		echo "getByPath : [$path]\n";
-		var_dump($recursive);
+		//echo "getByPath : [$path]\n";
+		//var_dump($recursive);
+		$files = $this->lib->getByPath($path, $recursive);
 
-		return $this->lib->getByPath($path, $recursive);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
@@ -331,44 +334,50 @@ class CumulusService {
 	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous?AND (par défaut)
 	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous?OR
 	 * 
-	 * Renvoie une liste de fichiers (les clefs et les attributs) correspondant à un ou plusieurs mots-clefs
+	 * Renvoie une liste de fichiers (les clefs et les attributs) correspondant
+	 * à un ou plusieurs mots-clefs
 	 */
 	protected function getByKeywords() {
-		$keywords = $this->resources[1];
+		$keywords = isset($this->resources[1]) ? $this->resources[1] : null;
 		$mode = "AND";
 		if ($this->getParam('OR') !== null) {
 			$mode = "OR";
 		}
 
-		echo "getByKeywords : [$keywords] [$mode]\n";
+		//echo "getByKeywords : [$keywords] [$mode]\n";
+		$files = $this->lib->getByKeywords($keywords, $mode);
 
-		return $this->lib->getByKeywords($keywords, $mode);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-user/jean-bernard@tela-botanica.org
 	 * 
-	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant à l'utilisateur jean-bernard@tela-botanica.org
+	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant à
+	 * l'utilisateur jean-bernard@tela-botanica.org
 	 */
 	protected function getByUser() {
-		$user = $this->resources[1];
+		$user = isset($this->resources[1]) ? $this->resources[1] : null;
 
-		echo "getByUser : [$user]\n";
+		//echo "getByUser : [$user]\n";
+		$files = $this->lib->getByUser($user);
 
-		return $this->lib->getByUser($user);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-group/botanique-à-bort-les-orgues
 	 * 
-	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant au groupe "botanique-à-bort-les-orgues"
+	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant au
+	 * groupe "botanique-à-bort-les-orgues"
 	 */
 	protected function getByGroup() {
-		$group = $this->resources[1];
+		$group = isset($this->resources[1]) ? $this->resources[1] : null;
 
-		echo "getByGroup : [$group]\n";
+		// echo "getByGroup : [$group]\n";
+		$files = $this->lib->getByGroup($group);
 
-		return $this->lib->getByGroup($group);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
@@ -377,32 +386,51 @@ class CumulusService {
 	 * Renvoie une liste de fichiers (les clefs et les attributs) ayant un type MIME "image/png"
 	 */
 	protected function getByMimetype() {
-		$mimetype = $this->resources[1];
+		array_shift($this->resources);
+		// les mimetypes contiennent des "/"
+		$mimetype = implode('/', $this->resources);
 
-		echo "getByMimetype : [$mimetype]\n";
+		// echo "getByMimetype : [$mimetype]\n";
+		$files = $this->lib->getByMimetype($mimetype);
 
-		return $this->lib->getByMimetype($mimetype);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-date/2015-02-04
-	 * Renvoie une liste de fichiers (les clefs et les attributs) datant exactement du 04/02/2015
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant
+	 * exactement du 04/02/2015
 	 * 
 	 * GET http://tb.org/cumulus.php/by-date/2015-02-04?BEFORE
-	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'avant le 04/02/2015 (exclu)
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'avant
+	 * le 04/02/2015 (exclu)
 	 * 
 	 * GET http://tb.org/cumulus.php/by-date/2015-02-04?AFTER
-	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'après 04/02/2015 (exclu)
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'après
+	 * le 04/02/2015 (exclu)
 	 * 
 	 * GET http://tb.org/cumulus.php/by-date/2014-07-13/2015-02-04
-	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'entre le 13/07/2014 et le 04/02/2015
+	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'entre
+	 * le 13/07/2014 et le 04/02/2015
 	 */
 	protected function getByDate() {
+		// date de création ou de modification ?
+		$dateColumn = isset($this->resources[1]) ? $this->resources[1] : null;
+		switch ($dateColumn) {
+			case "creation":
+				$dateColumn = CumulusInterface::COLUMN_CREATION_DATE;
+				break;
+			case "modification":
+				$dateColumn = CumulusInterface::COLUMN_LAST_MODIFICATION_DATE;
+				break;
+			default:
+				//$this->usage();
+		}
+		$date1 = isset($this->resources[2]) ? $this->resources[2] : null;
 		// une ou deux dates fournies ?
-		$date1 = $this->resources[1];
 		$date2 = null;
-		if (! empty($this->resources[2])) {
-			$date2 = $this->resources[2];
+		if (! empty($this->resources[3])) {
+			$date2 = $this->resources[3];
 		}
 		// opérateur de comparaison si une seule date fournie
 		$operator = "=";
@@ -414,9 +442,10 @@ class CumulusService {
 			}
 		}
 
-		echo "getByDate : [$date1] [$date2] [$operator]\n";
+		//echo "getByDate : [$dateColumn] [$date1] [$date2] [$operator]\n";
+		$files = $this->lib->getByDate($dateColumn, $date1, $date2, $operator);
 
-		return $this->lib->getByDate($date1, $date2, $operator);
+		$this->sendMultipleResults($files);
 	}
 
 	/**
@@ -427,9 +456,16 @@ class CumulusService {
 	 * Recherche avancée
 	 */
 	protected function search() {
+		// mode pour les requêtes contenant une ressource (mode simplifié)
+		$mode = "AND";
+		if ($this->getParam('OR') !== null) {
+			$mode = "OR";
+		}
+		// paramètres de recherche
 		$searchParams = array(
-			"mode" => "OR"
+			"mode" => $mode
 		);
+		// URL simplifiée ou non
 		if (! empty($this->resources[1])) {
 			$searchParams['keywords'] = $this->resources[1];
 			$searchParams['name'] = $this->resources[1];
@@ -440,7 +476,9 @@ class CumulusService {
 		echo "search :\n";
 		var_dump($searchParams);
 
-		return $this->lib->search($searchParams);
+		$files = $this->lib->search($searchParams);
+
+		$this->sendMultipleResults($files);
 	}
 
 	/**
