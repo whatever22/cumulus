@@ -9,6 +9,13 @@ interface CumulusInterface {
 	const COLUMN_CREATION_DATE = "creation_date";
 
 	/**
+	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
+	 * devront être inversés
+	 * @param type $inverse
+	 */
+	public function setInverseCriteria($inverse);
+
+	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
 	 * @param type $path
 	 * @param type $key

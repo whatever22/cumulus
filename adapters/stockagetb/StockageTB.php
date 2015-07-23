@@ -12,6 +12,10 @@ class StockageTB implements CumulusInterface {
 	/** Base de données PDO */
 	protected $db;
 
+	/** Inverseur de critères: si true, les méthodes GET retourneront tous les
+		résultats qui NE correspondent PAS aux critères demandés */
+	protected $inverseCriteria = false;
+
 	public function __construct($config) {
 		// copie de la config
 		$this->config = $config;
@@ -36,6 +40,30 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Renverse ou non la clause $clause en fonction de $this->inverseCriteria;
+	 * utilise un NOT (clause) pour l'inversion - attention, donnera sûrement
+	 * des résultats non désirés en cas de colonnes NULL @TODO faire mieux
+	 * @param type $clause
+	 */
+	protected function reverseOrNotClause($clause) {
+		if ($this->inverseCriteria === true) {
+			return "NOT (" . $clause . ")";
+		} else {
+			return $clause;
+		}
+	}
+
+	/**
+	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
+	 * devront être inversés
+	 * @param type $inverse
+	 */
+	public function setInverseCriteria($inverse) {
+		// @TODO filtrer l'entrée ?
+		$this->inverseCriteria = $inverse;
+	}
+
+	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
 	 * @param type $path
 	 * @param type $key
@@ -54,6 +82,7 @@ class StockageTB implements CumulusInterface {
 		$clausesString = implode(" AND ", $clauses);
 
 		//requête
+		$clausesString = $this->reverseOrNotClause($clausesString);
 		$q = "SELECT * FROM cumulus_files WHERE $clausesString LIMIT 1";
 		$r = $this->db->query($q);
 		if ($r != false) {
@@ -84,6 +113,7 @@ class StockageTB implements CumulusInterface {
 		}
 
 		//requête
+		$clause = $this->reverseOrNotClause($clause);
 		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -113,6 +143,7 @@ class StockageTB implements CumulusInterface {
 		}
 
 		//requête
+		$clause = $this->reverseOrNotClause($clause);
 		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -140,9 +171,14 @@ class StockageTB implements CumulusInterface {
 		$keywords = explode(',', $keywords);
 		$clauses = array();
 		foreach ($keywords as $kw) {
+			$not = false;
+			if (substr($kw, 0, 1) == "!") {
+				$not = true;
+				$kw = substr($kw, 1);
+			}
 			// astuce pour un like qui ne retourne pas les mots-clefs contenant
 			// plus que la chaîne demandée
-			$clauses[] = "CONCAT(',', keywords, ',') LIKE '%,$kw,%'";
+			$clauses[] = "CONCAT(',', keywords, ',') " . ($not ? "NOT " : "") . "LIKE '%,$kw,%'";
 		}
 		$operator = " AND ";
 		if ($mode === "OR") {
@@ -151,6 +187,7 @@ class StockageTB implements CumulusInterface {
 		$clausesString = implode($operator, $clauses);
 
 		//requête
+		$clausesString = $this->reverseOrNotClause($clausesString);
 		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -171,11 +208,11 @@ class StockageTB implements CumulusInterface {
 		if (empty($user)) {
 			return false;
 		}
-
 		// clauses
 		$clause = "owner = '$user'";
 
 		//requête
+		$clause = $this->reverseOrNotClause($clause);
 		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -196,11 +233,11 @@ class StockageTB implements CumulusInterface {
 		if (empty($group)) {
 			return false;
 		}
-
 		// clauses
 		$clause = "fgroup = '$group'";
 
 		//requête
+		$clause = $this->reverseOrNotClause($clause);
 		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -220,11 +257,11 @@ class StockageTB implements CumulusInterface {
 		if (empty($mimetype)) {
 			return false;
 		}
-
 		// clauses
 		$clause = "mimetype = '$mimetype'";
 
 		//requête
+		$clause = $this->reverseOrNotClause($clause);
 		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -267,6 +304,7 @@ class StockageTB implements CumulusInterface {
 		$clausesString = implode(" AND ", $clauses);
 
 		//requête
+		$clausesString = $this->reverseOrNotClause($clausesString);
 		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -317,9 +355,14 @@ class StockageTB implements CumulusInterface {
 					$keywords = explode(',', $val);
 					$subClauses = array();
 					foreach ($keywords as $kw) {
-						// astuce pour un like qui ne retourne pas les
-						// mots-clefs contenant plus que la chaîne demandée
-						$subClauses[] = "CONCAT(',', keywords, ',') LIKE '%,$kw,%'";
+						$not = false;
+						if (substr($kw, 0, 1) == "!") {
+							$not = true;
+							$kw = substr($kw, 1);
+						}
+						// astuce pour un like qui ne retourne pas les mots-clefs contenant
+						// plus que la chaîne demandée
+						$subClauses[] = "CONCAT(',', keywords, ',') " . ($not ? "NOT " : "") . "LIKE '%,$kw,%'";
 					}
 					$operator = " AND ";
 					if (isset($searchParams['keywords_mode']) && ($searchParams['keywords_mode'] == "OR")) {
@@ -364,6 +407,7 @@ class StockageTB implements CumulusInterface {
 		$clausesString = implode($operator, $clauses);
 	
 		// requête
+		$clausesString = $this->reverseOrNotClause($clausesString);
 		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
@@ -407,7 +451,8 @@ class StockageTB implements CumulusInterface {
 
 	/**
 	 * Retourne les attributs (métadonnées) du fichier $key situé dans $path,
-	 * mais pas le fichier lui-même
+	 * mais pas le fichier lui-même - ne fait pas de différence ici; c'est le
+	 * service qui se débrouille
 	 * @param type $path
 	 * @param type $key
 	 */

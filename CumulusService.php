@@ -231,6 +231,13 @@ class CumulusService {
 			return false;
 		}
 
+		// Inverseur de critères: si true, les méthodes GET retourneront tous les
+		// résultats qui NE correspondent PAS aux critères demandés
+		if ($this->getParam('INVERSE') !== null) {
+			// @TODO et si l'adapteur ne peut réaliser une telle opération ?
+			$this->lib->setInverseCriteria(true);
+		}
+
 		$firstResource = $this->resources[0];
 		// mode de récupération du/des fichiers
 		switch($firstResource) {

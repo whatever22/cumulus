@@ -26,7 +26,8 @@ class Cumulus implements CumulusInterface {
 
 		// adapteur
 		$adapterName = $this->config['adapter'];
-		$adapterPath = 'adapters/' . $adapterName . '.php';
+		$adapterDir = strtolower($adapterName);
+		$adapterPath = 'adapters/' . $adapterDir . '/' . $adapterName . '.php';
 		if (strpos($adapterName, "..") != false || $adapterName == '' || ! file_exists($adapterPath)) {
 			throw new Exception ("L'adapteur " . $adapterPath . " n'existe pas");
 		}
@@ -34,6 +35,15 @@ class Cumulus implements CumulusInterface {
 		// on passe la config à l'adapteur - à lui de stocker ses paramètres
 		// dans un endroit correct (adapters.nomdeladapteur par exemple)
 		$this->adapter = new $adapterName($this->config);
+	}
+
+	/**
+	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
+	 * devront être inversés
+	 * @param type $inverse
+	 */
+	public function setInverseCriteria($inverse) {
+		$this->adapter->setInverseCriteria($inverse);
 	}
 
 	/**
