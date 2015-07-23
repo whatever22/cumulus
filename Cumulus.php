@@ -123,7 +123,7 @@ class Cumulus implements CumulusInterface {
 	 * @param type $searchParams
 	 */
 	public function search($searchParams=array()) {
-		return $this->adapter->search($searchParams, $mode);
+		return $this->adapter->search($searchParams);
 	}
 
 	/**

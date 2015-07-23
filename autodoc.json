@@ -1,0 +1,13 @@
+{
+	"service": "cumulus",
+	"uri-patterns": [
+		[
+			"GET __ROOTURI__chemin/arbitraire/clef",
+			"Récupère le fichier clef contenu dans le répertoire /chemin/arbitraire (déclenche son téléchargement)"
+		],
+		[
+			"GET  __ROOTURI__by-name/file name",
+			"truc machin bidule"
+		]
+	]
+}

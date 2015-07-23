@@ -285,7 +285,54 @@ class StockageTB implements CumulusInterface {
 	 * "AND"
 	 * @param type $searchParams
 	 */
-	public function search($searchParams=array()) {}
+	public function search($searchParams=array()) {
+		// clauses
+		$clauses = [];
+		foreach ($searchParams as $sp => $val) {
+			switch($sp) {
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+				case "":
+					$clauses[] = "$sp $val";
+					break;
+			}
+		}
+		$operator = " AND ";
+		if ($searchParams['mode'] === "OR") {
+			$operator = " OR ";
+		}
+		$clausesString = implode($operator, $clauses);
+	
+		// requête
+		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
+		//echo "QUERY : $q\n";
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetchAll();
+			$this->decodeMeta($data);
+			return $data;
+		}
+		return false;
+	}
 
 	/**
 	 * Ajoute le fichier $file au stock, dans le chemin $path, avec la clef $key,

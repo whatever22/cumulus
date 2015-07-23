@@ -12,7 +12,10 @@ class CumulusService {
 
 	/** Config en JSON */
 	protected $config = array();
-	public static $CHEMIN_CONFIG = "config/service.json";
+	public static $CONFIG_PATH = "config/service.json";
+
+	/** Autodocumentation en JSON */
+	public static $AUTODOC_PATH = "autodoc.json";
 
 	/** HTTP verb received (GET, POST, PUT, DELETE, OPTIONS) */
 	protected $verb;
@@ -31,8 +34,8 @@ class CumulusService {
 
 	public function __construct() {
 		// config
-		if (file_exists(self::$CHEMIN_CONFIG)) {
-			$this->config = json_decode(file_get_contents(self::$CHEMIN_CONFIG), true);
+		if (file_exists(self::$CONFIG_PATH)) {
+			$this->config = json_decode(file_get_contents(self::$CONFIG_PATH), true);
 		} else {
 			throw new Exception("Le fichier " . self::$CHEMIN_CONFIG . " n'existe pas");
 		}
@@ -219,9 +222,12 @@ class CumulusService {
 	 * Obtenir un fichier : plusieurs manières dépendamment de l'URI
 	 */
 	protected function get() {
+		// réponse positive par défaut;
+		http_response_code(200);
+
 		// il faut au moins une ressource : clef ou méthode
 		if (empty($this->resources[0])) {
-			http_response_code(404);
+			$this->usage();
 			return false;
 		}
 
@@ -255,9 +261,24 @@ class CumulusService {
 			default:
 				$this->getByKey();
 		}
+	}
 
-		// réponse positive par défaut;
-		http_response_code(200);
+	/**
+	 * Autodescription du service
+	 */
+	protected function usage() {
+		$rootUri = $this->domainRoot . $this->baseURI . "/";
+		$infos = array(
+			"error" => "wrong URI"
+		);
+		// lecture de l'autodoc en JSON et remplacement de l'URI racine
+		if (file_exists(self::$AUTODOC_PATH)) {
+			$infos = json_decode(file_get_contents(self::$AUTODOC_PATH), true);
+			foreach ($infos['uri-patterns'] as &$up) {
+				$up[0] = str_replace("__ROOTURI__", $rootUri, $up[0]);
+			}
+		}
+		$this->sendJson($infos);
 	}
 
 	/**
@@ -531,7 +552,7 @@ class CumulusService {
 
 		echo "delete : [$path] [$key]\n";
 
-		return $this->lib->deleteByKey($path, $key);
+		$info = $this->lib->deleteByKey($path, $key);
 	}
 
 	/**
