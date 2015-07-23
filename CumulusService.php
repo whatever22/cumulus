@@ -558,8 +558,13 @@ class CumulusService {
 		$path = implode('/', $this->resources);
 
 		echo "delete : [$path] [$key]\n";
-
 		$info = $this->lib->deleteByKey($path, $key);
+
+		if ($info == false) {
+			$this->sendError("file not found in storage");
+		} else {
+			$this->sendJson($info);
+		}
 	}
 
 	/**

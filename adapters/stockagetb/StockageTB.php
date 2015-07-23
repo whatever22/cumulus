@@ -447,7 +447,14 @@ class StockageTB implements CumulusInterface {
 	 * @param type $path
 	 * @param type $key
 	 */
-	public function deleteByKey($path, $key ) {}
+	public function deleteByKey($path, $key) {
+		$fileInfo = $this->getByKey($path, $key);
+		if ($fileInfo != false) {
+			$diskPath = $fileInfo['disk_path'];
+			echo "Chemin : $diskPath\n";
+		}
+		return false;
+	}
 
 	/**
 	 * Retourne les attributs (métadonnées) du fichier $key situé dans $path,
