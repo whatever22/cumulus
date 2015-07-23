@@ -286,38 +286,79 @@ class StockageTB implements CumulusInterface {
 	 * @param type $searchParams
 	 */
 	public function search($searchParams=array()) {
-		// clauses
+		if (empty($searchParams)) {
+			return false;
+		}
+		// clauses @TODO factoriser avec les méthodes de recherche spécifiques
+		// (pas si simple)
 		$clauses = [];
 		foreach ($searchParams as $sp => $val) {
 			switch($sp) {
-				case "":
-					$clauses[] = "$sp $val";
+				case "key":
+					$clauses[] = "(key = '$val')";
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "path":
+					$subclause = "(path = '$val')";
+					// @TODO vérifier booléen ou chaîne
+					if (isset($searchParams['path_recursive']) && ($searchParams['path_recursive'] === 'true')) {
+						$subclause = "(path LIKE '$val%')";
+					}
+					$clauses[] = $subclause;
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "name":
+					$subclause = "(original_name LIKE '%" . str_replace('*', '%', $val) . "%')";
+					// @TODO vérifier booléen ou chaîne
+					if (isset($searchParams['name_strict']) && ($searchParams['name_strict'] === 'true')) {
+						$subclause = "(original_name = '$val')";
+					}
+					$clauses[] = $subclause;
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "keywords":
+					$keywords = explode(',', $val);
+					$subClauses = array();
+					foreach ($keywords as $kw) {
+						// astuce pour un like qui ne retourne pas les
+						// mots-clefs contenant plus que la chaîne demandée
+						$subClauses[] = "CONCAT(',', keywords, ',') LIKE '%,$kw,%'";
+					}
+					$operator = " AND ";
+					if (isset($searchParams['keywords_mode']) && ($searchParams['keywords_mode'] == "OR")) {
+						$operator = " OR ";
+					}
+					$clauses[] = '(' . implode($operator, $subClauses) . ')';
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "user":
+					$clauses[] = "(owner = '$val')";
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "group":
+					$clauses[] = "(fgroup = '$val')";
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "mimetype":
+					$clauses[] = "(mimetype = '$val')";
 					break;
-				case "":
-					$clauses[] = "$sp $val";
+				case "creation_date":
+					$clauses[] = "(date(creation_date) = '$val')";
 					break;
+				case "min_creation_date":
+					$clauses[] = "(date(creation_date) > '$val')";
+					break;
+				case "max_creation_date":
+					$clauses[] = "(date(creation_date) < '$val')";
+					break;
+				case "last_modif_date":
+					$clauses[] = "(date(last_modification_date) = '$val')";
+					break;
+				case "min_last_modif_date":
+					$clauses[] = "(date(last_modification_date) > '$val')";
+					break;
+				case "max_last_modif_date":
+					$clauses[] = "(date(last_modification_date) < '$val')";
+					break;
+				default:
 			}
 		}
 		$operator = " AND ";
-		if ($searchParams['mode'] === "OR") {
+		if (! empty($searchParams['mode']) && ($searchParams['mode'] === "OR")) {
 			$operator = " OR ";
 		}
 		$clausesString = implode($operator, $clauses);

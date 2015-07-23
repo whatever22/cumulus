@@ -490,13 +490,13 @@ class CumulusService {
 		if (! empty($this->resources[1])) {
 			$searchParams['keywords'] = $this->resources[1];
 			$searchParams['name'] = $this->resources[1];
+			$searchParams['mode'] = "OR";
 		} else {
 			$searchParams = $this->params;
 		}
 
-		echo "search :\n";
-		var_dump($searchParams);
-
+		//echo "search :\n";
+		//var_dump($searchParams);
 		$files = $this->lib->search($searchParams);
 
 		$this->sendMultipleResults($files);
