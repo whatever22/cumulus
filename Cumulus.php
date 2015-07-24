@@ -40,7 +40,6 @@ class Cumulus implements CumulusInterface {
 	/**
 	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
 	 * devront être inversés
-	 * @param type $inverse
 	 */
 	public function setInverseCriteria($inverse) {
 		$this->adapter->setInverseCriteria($inverse);
@@ -48,8 +47,6 @@ class Cumulus implements CumulusInterface {
 
 	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
-	 * @param type $path
-	 * @param type $key
 	 */
 	public function getByKey($path, $key) {
 		return $this->adapter->getByKey($path, $key);
@@ -58,8 +55,6 @@ class Cumulus implements CumulusInterface {
 	/**
 	 * Retourne une liste de fichiers dont les noms correspondent à $name; si
 	 * $trict est true, compare avec un "=" sinon avec un "LIKE"
-	 * @param type $name
-	 * @param type $strict
 	 */
 	public function getByName($name, $strict=false) {
 		return $this->adapter->getByName($name, $strict);
@@ -68,8 +63,6 @@ class Cumulus implements CumulusInterface {
 	/**
 	 * Retourne une liste de fichiers se trouvant dans le répertoire $path; si
 	 * $recursive est true, cherchera dans tous les sous-répertoires
-	 * @param type $path
-	 * @param type $recursive
 	 */
 	public function getByPath($path, $recursive=false) {
 		return $this->adapter->getByPath($path, $recursive);
@@ -80,8 +73,6 @@ class Cumulus implements CumulusInterface {
 	 * (séparés par des virgules ); si $mode est "OR", un "OU" sera appliqué
 	 * entre les mots-clefs, sinon un "ET"; si un mot-clef est préfixé par "!",
 	 * on cherchera les fichiers n'ayant pas ce mot-clef
-	 * @param type $keywords
-	 * @param type $mode
 	 */
 	public function getByKeywords($keywords, $mode="AND") {
 		return $this->adapter->getByKeywords($keywords, $mode);
@@ -93,8 +84,6 @@ class Cumulus implements CumulusInterface {
 	 * entre les groupes, sinon un "ET"; si un groupe est préfixé par "!", on
 	 * cherchera les fichiers n'appartenant pas à ce groupe
 	 * @TODO gérer les droits
-	 * @param type $groups
-	 * @param type $mode
 	 */
 	public function getByGroups($groups, $mode="AND") {
 		return $this->adapter->getByGroups($groups, $mode);
@@ -103,7 +92,6 @@ class Cumulus implements CumulusInterface {
 	/**
 	 * Retourne une liste de fichiers appartenant à l'utilisateur $user
 	 * @TODO gérer les droits
-	 * @param type $user
 	 */
 	public function getByUser($user) {
 		return $this->adapter->getByUser($user);
@@ -111,7 +99,6 @@ class Cumulus implements CumulusInterface {
 
 	/**
 	 * Retourne une liste de fichiers dont le type MIME est $mimetype
-	 * @param type $mimetype
 	 */
 	public function getByMimetype($mimetype) {
 		return $this->adapter->getByMimetype($mimetype);
@@ -119,7 +106,6 @@ class Cumulus implements CumulusInterface {
 
 	/**
 	 * Retourne une liste de fichiers dont la licence est $license
-	 * @param type $license
 	 */
 	public function getByLicense($license) {
 		return $this->adapter->getByLicense($license);
@@ -130,9 +116,6 @@ class Cumulus implements CumulusInterface {
 	 * ou de modification ?) : si $date1 et $date2 sont spécifiées, renverra les
 	 * fichiers dont la date se trouve entre les deux; sinon, comparera à $date1
 	 * en fonction de $operator ("=", "<" ou ">")
-	 * @param type $date1
-	 * @param type $date2
-	 * @param type $operator
 	 */
 	public function getByDate($dateColumn, $date1, $date2, $operator="=") {
 		return $this->adapter->getByDate($dateColumn, $date1, $date2, $operator);
@@ -143,7 +126,6 @@ class Cumulus implements CumulusInterface {
 	 * critères de recherche contenus dans $searchParams (paires de
 	 * clefs / valeurs); le critère "mode" peut valoir "OR" (par défaut) ou
 	 * "AND"
-	 * @param type $searchParams
 	 */
 	public function search($searchParams=array()) {
 		return $this->adapter->search($searchParams);
@@ -153,43 +135,30 @@ class Cumulus implements CumulusInterface {
 	 * Ajoute le fichier $file au stock, dans le chemin $path, avec la clef $key,
 	 * les mots-clefs $keywords (séparés par des virgules) et les métadonnées
 	 * $meta (portion de JSON libre); si $key est null, une clef sera attribuée
-	 * @param type $file
-	 * @param type $path
-	 * @param type $key
-	 * @param type $keywords
-	 * @param type $meta
 	 */
-	public function addFile($file, $path, $key=null, $keywords=null, $meta=null) {
-		return $this->adapter->addFile($file, $path, $key, $keywords, $meta);
+	public function addFile($file, $path, $key=null, $keywords=null, $groups=null, $license=null, $meta=null) {
+		return $this->adapter->addFile($file, $path, $key, $keywords, $groups, $license, $meta);
 	}
 
 	/**
 	 * Remplace le contenu (si $file est spécifié) et / ou les métadonnées du
 	 * fichier $key situé dans $path
-	 * @param type $file
-	 * @param type $path
-	 * @param type $key
-	 * @param type $keywords
-	 * @param type $meta
 	 */
 	public function updateByKey($file, $path, $key, $keywords=null, $meta=null) {
 		return $this->adapter->updateByKey($file, $path, $key, $keywords, $meta);
 	}
 
 	/**
-	 * Supprime le fichier $key situé dans $path
-	 * @param type $path
-	 * @param type $key
+	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne
+	 * supprime que la référence mais conserve le fichier dans le stockage
 	 */
-	public function deleteByKey($path, $key) {
-		return $this->adapter->deleteByKey($path, $key);
+	public function deleteByKey($path, $key, $keepFile=false) {
+		return $this->adapter->deleteByKey($path, $key, $keepFile);
 	}
 
 	/**
 	 * Retourne les attributs (métadonnées) du fichier $key situé dans $path,
 	 * mais pas le fichier lui-même
-	 * @param type $path
-	 * @param type $key
 	 */
 	public function getAttributesByKey($path, $key) {
 		return $this->adapter->getAttributesByKey($path, $key);

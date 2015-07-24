@@ -11,7 +11,7 @@ CREATE  TABLE IF NOT EXISTS `cumulus_files` (
   `permissions` VARCHAR(10) NULL DEFAULT NULL COMMENT '@TODO set up a strategy!',
   `keywords` TEXT NULL DEFAULT NULL COMMENT 'list of keywords, separated by commas (",")',
   `license` VARCHAR(50) COMMENT 'license chosen by the owner : CC-BY-CA, GPL, LPRAB, copyright...',
-  `meta` TEXT NULL COMMENT 'free metadata JSON string; useful for license, comments...',
+  `meta` TEXT NULL COMMENT 'free metadata JSON string; useful for comments...',
   `creation_date` DATETIME NOT NULL DEFAULT NOW() COMMENT 'date when the file was added - immutable',
   `last_modification_date` DATETIME NOT NULL DEFAULT NOW() COMMENT 'date when the file was modified for the last time',
 -- `description` TEXT NULL,

@@ -569,6 +569,8 @@ class CumulusService {
 		$file = null;
 		$key = $this->getParam('key');
 		$keywords = $this->getParam('keywords');
+		$groups = $this->getParam('groups');
+		$license = $this->getParam('license');
 		$meta = $this->getParam('meta');
 
 		if (! empty($_FILES['file'])) {
@@ -576,9 +578,10 @@ class CumulusService {
 			$file = $_FILES['file'];
 		} // sinon envoi en flux (contenu du fichier dans le corps de la requête)
 
-		echo "POST: [$file] [$path] [$key] [$keywords] [$meta]";
+		echo "POST: [$path] [$key] [$keywords] [$groups] [$license] [$meta]";
+		print_r($file);
 
-		$this->lib->addFile($file, $path, $key, $keywords, $meta);
+		$this->lib->addFile($file, $path, $key, $keywords, $groups, $license, $meta);
 	}
 
 	/**
@@ -588,7 +591,7 @@ class CumulusService {
 		$key = array_pop($this->resources);
 		$path = implode('/', $this->resources);
 
-		echo "delete : [$path] [$key]\n";
+		//echo "delete : [$path] [$key]\n";
 		$info = $this->lib->deleteByKey($path, $key);
 
 		if ($info == false) {

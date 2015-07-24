@@ -3,9 +3,9 @@
 class StockageDisque {
 	
 	// attention $racine_fichiers doit contenir un slash terminal
-	private $racine_fichiers = "/home/aurelien/web/cumulus/files/";
-	private $droits = 0755;
-	private $ds = DIRECTORY_SEPARATOR;
+	protected $racine_fichiers = "/home/aurelien/web/cumulus/files/";
+	protected $droits = 0755;
+	protected $ds = DIRECTORY_SEPARATOR;
 	
 	public function getCheminFichier($chemin_relatif) {
 		return $this->racine_fichiers.$this->desinfecterCheminFichier($chemin_relatif);
@@ -24,8 +24,17 @@ class StockageDisque {
 		return array_filter(glob($this->getCheminDossierComplet($chemin_dossier).'*'), 'is_file');
 	}
 	
-	private function getCheminDossierComplet($chemin_dossier) {
+	protected function getCheminDossierComplet($chemin_dossier) {
 		return $this->racine_fichiers.$this->desinfecterCheminFichier($chemin_dossier);
+	}
+
+	/**
+	 * Supprime le fichier $chemin du disque
+	 * @param type $chemin
+	 * @return type
+	 */
+	public function supprimerFichier($chemin) {
+		return unlink($chemin);
 	}
 	
 	// $origine est un chemin complet, absolu d'un fichier
@@ -40,7 +49,7 @@ class StockageDisque {
 	}
 	
 	// $origine et $destination sont des chemins de fichiers absolus
-	private function deplacerFichierSurDisque($origine, $destination) {
+	protected function deplacerFichierSurDisque($origine, $destination) {
 		$deplacement = false;
 		if(is_uploaded_file($origine)) {
 			$deplacement = move_uploaded_file($origine, $destination);
@@ -51,7 +60,7 @@ class StockageDisque {
 		return $deplacement;
 	}	
 	
-	private function preparerCheminFichier($dossier_destination) {	
+	protected function preparerCheminFichier($dossier_destination) {	
 		
 		$dossier_destination = $this->desinfecterCheminFichier($dossier_destination);				
 		$chemin_dossier_complet = $this->racine_fichiers.$dossier_destination;
@@ -64,7 +73,7 @@ class StockageDisque {
 		return $chemin_dossier_complet;
 	}
 		
-	private function desinfecterCheminFichier($chemin) {
+	protected function desinfecterCheminFichier($chemin) {
 		// pour le moment on supprime les occurences de .. dans les dossiers et les // ou /// etc...
 		$chemin = preg_replace("([\.]{2,})", '', $chemin);
 		$chemin = preg_replace('/(\/+)/','/', $chemin);
@@ -76,7 +85,7 @@ class StockageDisque {
 	}
 	
 	// http://stackoverflow.com/questions/2021624/string-sanitizer-for-filename
-	private function desinfecterNomFichier($nom) {
+	protected function desinfecterNomFichier($nom) {
 		// Remove anything which isn't a word, whitespace, number
 		// or any of the following caracters -_~,;:[]().
 		$nom = preg_replace("([^\w\s\d\-_~,;:\[\]\(\).])", '', $nom);
