@@ -54,6 +54,26 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Exécute une requête pour de multiples fichiers en fonction de la clause
+	 * $clause, qui sera renversée en fonction de $this->inverseCriteria, et
+	 * renvoie une liste de résultats avec les métadonnées décodées
+	 * @param type $clause
+	 * @return boolean
+	 */
+	protected function queryMultipleFiles($clause) {
+		$clause = $this->reverseOrNotClause($clause);
+		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
+		//echo "QUERY : $q\n";
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetchAll();
+			$this->decodeMeta($data);
+			return $data;
+		}
+		return false;
+	}
+
+	/**
 	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
 	 * devront être inversés
 	 * @param type $inverse
@@ -112,17 +132,7 @@ class StockageTB implements CumulusInterface {
 			$clause = "original_name LIKE '%" . str_replace('*', '%', $name) . "%'";
 		}
 
-		//requête
-		$clause = $this->reverseOrNotClause($clause);
-		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clause);
 	}
 
 	/**
@@ -142,17 +152,7 @@ class StockageTB implements CumulusInterface {
 			$clause = "path LIKE '$path%'";
 		}
 
-		//requête
-		$clause = $this->reverseOrNotClause($clause);
-		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clause);
 	}
 
 	/**
@@ -187,17 +187,7 @@ class StockageTB implements CumulusInterface {
 		}
 		$clausesString = implode($operator, $clauses);
 
-		//requête
-		$clausesString = $this->reverseOrNotClause($clausesString);
-		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clausesString);
 	}
 
 	/**
@@ -233,17 +223,7 @@ class StockageTB implements CumulusInterface {
 		}
 		$clausesString = implode($operator, $clauses);
 
-		//requête
-		$clausesString = $this->reverseOrNotClause($clausesString);
-		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clausesString);
 	}
 
 	/**
@@ -258,17 +238,7 @@ class StockageTB implements CumulusInterface {
 		// clauses
 		$clause = "owner = '$user'";
 
-		//requête
-		$clause = $this->reverseOrNotClause($clause);
-		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clause);
 	}
 
 	/**
@@ -282,17 +252,21 @@ class StockageTB implements CumulusInterface {
 		// clauses
 		$clause = "mimetype = '$mimetype'";
 
-		//requête
-		$clause = $this->reverseOrNotClause($clause);
-		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
+		return $this->queryMultipleFiles($clause);
+	}
+
+	/**
+	 * Retourne une liste de fichiers dont la licence est $license
+	 * @param type $license
+	 */
+	public function getByLicense($license) {
+		if (empty($license)) {
+			return false;
 		}
-		return false;
+		// clauses
+		$clause = "license = '$license'";
+
+		return $this->queryMultipleFiles($clause);
 	}
 
 	/**
@@ -325,17 +299,7 @@ class StockageTB implements CumulusInterface {
 		}
 		$clausesString = implode(" AND ", $clauses);
 
-		//requête
-		$clausesString = $this->reverseOrNotClause($clausesString);
-		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clause);
 	}
 
 	/**
@@ -444,17 +408,7 @@ class StockageTB implements CumulusInterface {
 		}
 		$clausesString = implode($operator, $clauses);
 	
-		// requête
-		$clausesString = $this->reverseOrNotClause($clausesString);
-		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
-		//echo "QUERY : $q\n";
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		return $this->queryMultipleFiles($clausesString);
 	}
 
 	/**

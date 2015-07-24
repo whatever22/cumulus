@@ -67,6 +67,12 @@ interface CumulusInterface {
 	public function getByUser($user);
 
 	/**
+	 * Retourne une liste de fichiers dont la licence est $license
+	 * @param type $license
+	 */
+	public function getByLicense($license);
+
+	/**
 	 * Retourne une liste de fichiers dont le type MIME est $mimetype
 	 * @param type $mimetype
 	 */

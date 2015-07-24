@@ -118,6 +118,14 @@ class Cumulus implements CumulusInterface {
 	}
 
 	/**
+	 * Retourne une liste de fichiers dont la licence est $license
+	 * @param type $license
+	 */
+	public function getByLicense($license) {
+		return $this->adapter->getByLicense($license);
+	}
+
+	/**
 	 * Retourne une liste de fichiers en fonction de leur date (@TODO de création
 	 * ou de modification ?) : si $date1 et $date2 sont spécifiées, renverra les
 	 * fichiers dont la date se trouve entre les deux; sinon, comparera à $date1

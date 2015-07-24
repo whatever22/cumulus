@@ -159,21 +159,30 @@ class CumulusService {
 	}
 
 	/**
-	 * Envoie le fichier $file au client, en forçant le téléchargement
+	 * Envoie le fichier $file au client en forçant le téléchargement; s'il
+	 * s'agit d'une URL et non d'un fichier stocké, redirige vers cette URL
 	 * @param type $file
 	 */
 	protected function sendFile($file, $mimetype='application/octet-stream') {
-		if (! file_exists($file)) {
-			$this->sendError("file does not exist in storage");
+		// fichier stocké ou référence vers une URL ?
+		echo "Chemin : $file<br/>";
+		if (preg_match('`https?://`', $file) != false) {
+			// URL
+			header('Location: ' . $file);
+		} else {
+			// fichier stocké
+			if (! file_exists($file)) {
+				$this->sendError("file does not exist in storage");
+			}
+			header('Content-Type: ' . $mimetype);
+			header('Content-Disposition: attachment');
+			header('Expires: 0');
+			header('Cache-Control: must-revalidate');
+			header('Pragma: public');
+			header('Content-Length: ' . filesize($file));
+			// envoi du contenu
+			readfile($file);
 		}
-		header('Content-Type: ' . $mimetype);
-		header('Content-Disposition: attachment');
-		header('Expires: 0');
-		header('Cache-Control: must-revalidate');
-		header('Pragma: public');
-		header('Content-Length: ' . filesize($file));
-		// envoi du contenu
-		readfile($file);
 		exit;
 	}
 
@@ -261,6 +270,9 @@ class CumulusService {
 				break;
 			case "by-mimetype":
 				$this->getByMimetype();
+				break;
+			case "by-license":
+				$this->getByLicense();
 				break;
 			case "search":
 				$this->search();
@@ -424,6 +436,21 @@ class CumulusService {
 
 		// echo "getByMimetype : [$mimetype]\n";
 		$files = $this->lib->getByMimetype($mimetype);
+
+		$this->sendMultipleResults($files);
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/by-license/CC-BY-SA
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) ayant une
+	 * licence CC-BY-SA
+	 */
+	protected function getByLicense() {
+		$license = isset($this->resources[1]) ? $this->resources[1] : null;
+
+		// echo "getByLicense : [$license]\n";
+		$files = $this->lib->getByLicense($license);
 
 		$this->sendMultipleResults($files);
 	}
