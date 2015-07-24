@@ -253,8 +253,8 @@ class CumulusService {
 			case "by-user":
 				$this->getByUser();
 				break;
-			case "by-group":
-				$this->getByGroup();
+			case "by-groups":
+				$this->getByGroups();
 				break;
 			case "by-date":
 				$this->getByDate();
@@ -379,6 +379,25 @@ class CumulusService {
 	}
 
 	/**
+	 * GET http://tb.org/cumulus.php/by-groups/botanique-à-bort-les-orgues
+	 * 
+	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant au
+	 * groupe "botanique-à-bort-les-orgues"
+	 */
+	protected function getByGroups() {
+		$groups = isset($this->resources[1]) ? $this->resources[1] : null;
+		$mode = "AND";
+		if ($this->getParam('OR') !== null) {
+			$mode = "OR";
+		}
+
+		//echo "getByGroups : [$groups] [$mode]\n";
+		$files = $this->lib->getByGroups($groups, $mode);
+
+		$this->sendMultipleResults($files);
+	}
+
+	/**
 	 * GET http://tb.org/cumulus.php/by-user/jean-bernard@tela-botanica.org
 	 * 
 	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant à
@@ -389,21 +408,6 @@ class CumulusService {
 
 		//echo "getByUser : [$user]\n";
 		$files = $this->lib->getByUser($user);
-
-		$this->sendMultipleResults($files);
-	}
-
-	/**
-	 * GET http://tb.org/cumulus.php/by-group/botanique-à-bort-les-orgues
-	 * 
-	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant au
-	 * groupe "botanique-à-bort-les-orgues"
-	 */
-	protected function getByGroup() {
-		$group = isset($this->resources[1]) ? $this->resources[1] : null;
-
-		// echo "getByGroup : [$group]\n";
-		$files = $this->lib->getByGroup($group);
 
 		$this->sendMultipleResults($files);
 	}

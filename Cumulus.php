@@ -77,13 +77,27 @@ class Cumulus implements CumulusInterface {
 
 	/**
 	 * Retourne une liste de fichiers dont les mots-clefs sont $keywords
-	 * (séparés par des virgules); si $mode est "OR", un "OU" sera appliqué
-	 * entre les mots-clefs, sinon un "ET"
+	 * (séparés par des virgules ); si $mode est "OR", un "OU" sera appliqué
+	 * entre les mots-clefs, sinon un "ET"; si un mot-clef est préfixé par "!",
+	 * on cherchera les fichiers n'ayant pas ce mot-clef
 	 * @param type $keywords
 	 * @param type $mode
 	 */
 	public function getByKeywords($keywords, $mode="AND") {
 		return $this->adapter->getByKeywords($keywords, $mode);
+	}
+
+	/**
+	 * Retourne une liste de fichiers appartenant aux groupes $groups
+	 * (séparés par des virgules ); si $mode est "OR", un "OU" sera appliqué
+	 * entre les groupes, sinon un "ET"; si un groupe est préfixé par "!", on
+	 * cherchera les fichiers n'appartenant pas à ce groupe
+	 * @TODO gérer les droits
+	 * @param type $groups
+	 * @param type $mode
+	 */
+	public function getByGroups($groups, $mode="AND") {
+		return $this->adapter->getByGroups($groups, $mode);
 	}
 
 	/**
@@ -93,15 +107,6 @@ class Cumulus implements CumulusInterface {
 	 */
 	public function getByUser($user) {
 		return $this->adapter->getByUser($user);
-	}
-
-	/**
-	 * Retourne une liste de fichiers appartenant au groupe $group
-	 * @TODO gérer les droits
-	 * @param type $group
-	 */
-	public function getByGroup($group) {
-		return $this->adapter->getByGroup($group);
 	}
 
 	/**

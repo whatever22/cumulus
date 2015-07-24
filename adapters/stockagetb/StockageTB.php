@@ -157,8 +157,9 @@ class StockageTB implements CumulusInterface {
 
 	/**
 	 * Retourne une liste de fichiers dont les mots-clefs sont $keywords
-	 * (séparés par des virgules ) {} si $mode est "OR", un "OU" sera appliqué
-	 * entre les mots-clefs, sinon un "ET"
+	 * (séparés par des virgules ); si $mode est "OR", un "OU" sera appliqué
+	 * entre les mots-clefs, sinon un "ET"; si un mot-clef est préfixé par "!",
+	 * on cherchera les fichiers n'ayant pas ce mot-clef
 	 * @param type $keywords
 	 * @param type $mode
 	 */
@@ -200,20 +201,41 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Retourne une liste de fichiers appartenant à l'utilisateur $user
+	 * Retourne une liste de fichiers appartenant aux groupes $groups
+	 * (séparés par des virgules ); si $mode est "OR", un "OU" sera appliqué
+	 * entre les groupes, sinon un "ET"; si un groupe est préfixé par "!", on
+	 * cherchera les fichiers n'appartenant pas à ce groupe
 	 * @TODO gérer les droits
-	 * @param type $user
+	 * @param type $groups
+	 * @param type $mode
 	 */
-	public function getByUser($user) {
-		if (empty($user)) {
+	public function getByGroups($groups, $mode="AND") {
+		if (empty($groups)) {
 			return false;
 		}
+
 		// clauses
-		$clause = "owner = '$user'";
+		$groups = explode(',', $groups);
+		$clauses = array();
+		foreach ($groups as $g) {
+			$not = false;
+			if (substr($g, 0, 1) == "!") {
+				$not = true;
+				$g = substr($g, 1);
+			}
+			// astuce pour un like qui ne retourne pas les groupes contenant
+			// plus que la chaîne demandée
+			$clauses[] = "CONCAT(',', groups, ',') " . ($not ? "NOT " : "") . "LIKE '%,$g,%'";
+		}
+		$operator = " AND ";
+		if ($mode === "OR") {
+			$operator = " OR ";
+		}
+		$clausesString = implode($operator, $clauses);
 
 		//requête
-		$clause = $this->reverseOrNotClause($clause);
-		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
+		$clausesString = $this->reverseOrNotClause($clausesString);
+		$q = "SELECT * FROM cumulus_files WHERE $clausesString ORDER BY path, original_name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
 		if ($r != false) {
@@ -225,16 +247,16 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Retourne une liste de fichiers appartenant au groupe $group
+	 * Retourne une liste de fichiers appartenant à l'utilisateur $user
 	 * @TODO gérer les droits
-	 * @param type $group
+	 * @param type $user
 	 */
-	public function getByGroup($group) {
-		if (empty($group)) {
+	public function getByUser($user) {
+		if (empty($user)) {
 			return false;
 		}
 		// clauses
-		$clause = "fgroup = '$group'";
+		$clause = "owner = '$user'";
 
 		//requête
 		$clause = $this->reverseOrNotClause($clause);
@@ -370,11 +392,27 @@ class StockageTB implements CumulusInterface {
 					}
 					$clauses[] = '(' . implode($operator, $subClauses) . ')';
 					break;
+				case "groups":
+					$groups = explode(',', $val);
+					$subClauses = array();
+					foreach ($groups as $g) {
+						$not = false;
+						if (substr($g, 0, 1) == "!") {
+							$not = true;
+							$g = substr($g, 1);
+						}
+						// astuce pour un like qui ne retourne pas les groupes contenant
+						// plus que la chaîne demandée
+						$subClauses[] = "CONCAT(',', groups, ',') " . ($not ? "NOT " : "") . "LIKE '%,$g,%'";
+					}
+					$operator = " AND ";
+					if (isset($searchParams['groups_mode']) && ($searchParams['groups_mode'] == "OR")) {
+						$operator = " OR ";
+					}
+					$clauses[] = '(' . implode($operator, $subClauses) . ')';
+					break;
 				case "user":
 					$clauses[] = "(owner = '$val')";
-					break;
-				case "group":
-					$clauses[] = "(fgroup = '$val')";
 					break;
 				case "mimetype":
 					$clauses[] = "(mimetype = '$val')";
