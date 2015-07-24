@@ -316,7 +316,7 @@ class CumulusService {
 		if ($file == false) {
 			$this->sendError("file not found", 404);
 		} else {
-			$this->sendFile($file['disk_path'], $file['mimetype']);
+			$this->sendFile($file['storage_path'], $file['mimetype']);
 		}
 	}
 

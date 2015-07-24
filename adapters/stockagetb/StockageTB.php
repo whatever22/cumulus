@@ -1,5 +1,7 @@
 <?php
 
+require 'StockageDisque.php';
+
 /**
  * Adapteur par défaut de la couche de stockage de Cumulus - utilise une base de
  * données MySQL
@@ -11,6 +13,9 @@ class StockageTB implements CumulusInterface {
 
 	/** Base de données PDO */
 	protected $db;
+
+	/** Lib stockage sur disque */
+	protected $stockageDisque;
 
 	/** Inverseur de critères: si true, les méthodes GET retourneront tous les
 		résultats qui NE correspondent PAS aux critères demandés */
@@ -24,6 +29,9 @@ class StockageTB implements CumulusInterface {
 		$DB = $this->config['adapters']['StockageTB']['db'];
 		$dsn = "mysql:host=" . $DB['host'] . ";dbname=" . $DB['dbname'] . ";port=" . $DB['port'];
 		$this->db = new PDO($dsn, $DB['username'], $DB['password']);
+
+		// lib de stockage sur disque
+		$this->stockageDisque = new StockageDisque();
 
 		// pour ne pas récupérer les valeurs en double (indices numériques + texte)
 		$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
@@ -445,7 +453,7 @@ class StockageTB implements CumulusInterface {
 	public function deleteByKey($path, $key) {
 		$fileInfo = $this->getByKey($path, $key);
 		if ($fileInfo != false) {
-			$diskPath = $fileInfo['disk_path'];
+			$diskPath = $fileInfo['storage_path'];
 			echo "Chemin : $diskPath\n";
 		}
 		return false;
