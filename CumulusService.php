@@ -167,10 +167,10 @@ class CumulusService {
 		// fichier stocké ou référence vers une URL ?
 		echo "Chemin : $file<br/>";
 		if (preg_match('`https?://`', $file) != false) {
-			// URL
+			// URL => redirection
 			header('Location: ' . $file);
 		} else {
-			// fichier stocké
+			// fichier stocké => téléchargement
 			if (! file_exists($file)) {
 				$this->sendError("file does not exist in storage");
 			}

@@ -381,6 +381,9 @@ class StockageTB implements CumulusInterface {
 				case "mimetype":
 					$clauses[] = "(mimetype = '$val')";
 					break;
+				case "license":
+					$clauses[] = "(license = '$val')";
+					break;
 				case "creation_date":
 					$clauses[] = "(date(creation_date) = '$val')";
 					break;
