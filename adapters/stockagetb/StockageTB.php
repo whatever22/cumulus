@@ -421,31 +421,49 @@ class StockageTB implements CumulusInterface {
 			throw new Exception('key must be specified');
 		}
 		// écriture du fichier temporaire dans le fichier de destination
-		$storageInfo = $this->diskStorage->stockerContenuFichier($file, $path, $key);
+		$storageInfo = $this->diskStorage->stockerFichier($file, $path, $key);
 		// si ça s'est bien passé, isnertion dans la BD
 		if ($storageInfo != false) {
-			$q = "INSERT INTO cumulus_files VALUES ('$key', '$key', '$path'"
-				. ", '" . $storageInfo['path'] . "', '" . $storageInfo['mimetype']
-				. "', NULL, '" . implode(',', $groups) . "', '$permissions'"
-				. ", '" . implode(',', $keywords) . "', '$license'"
-				. ", '" . json_encode($meta) . "', DEFAULT, DEFAULT)";
-			echo "QUERY : $q\n";
-			exit;
-			$r = $this->db->query($q);
-			if ($r != false) {
-				$data = $r->fetchAll();
-				$this->decodeMeta($data);
-				return $data;
+			$insertInfo = $this->insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+			// si l'insertion s'est bien passée
+			if ($insertInfo != false) {
+				// re-lecture de toutes les infos (mode fainéant)
+				return $this->getAttributesByKey($path, $key);
+			} else {
+				// sinon on détruit le fichier
+				$this->diskStorage->supprimerFichier($storageInfo['disk_path']);
 			}
-			return false;
 		}
+		return false;
+	}
+
+	/**
+	 * Insère une référence de fichier dans la base de données, en fonction des
+	 * informations retournées par la couche de stockage sur disque
+	 */
+	protected function insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta) {
+		// requete @TODO proteger les entrées
+		$q = "INSERT INTO cumulus_files VALUES ('$key', '$key', '$path'"
+			. ", '" . $storageInfo['disk_path'] . "', '" . $storageInfo['mimetype']
+			. "', NULL, '" . implode(',', $groups) . "', '$permissions'"
+			. ", '" . implode(',', $keywords) . "', '$license'"
+			. ", '" . json_encode($meta) . "', DEFAULT, DEFAULT)";
+		echo "QUERY : $q\n";
+		exit;
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetchAll();
+			$this->decodeMeta($data);
+			return $data;
+		}
+		return false;
 	}
 
 	/**
 	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
 	public function updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta) {
-		
+		throw new Exception('not implemented');
 	}
 
 	/**

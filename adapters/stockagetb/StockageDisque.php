@@ -39,12 +39,13 @@ class StockageDisque {
 	
 	// $origine est un chemin complet, absolu d'un fichier
 	// $dossier_destination est un nom de dossier relatif au "cloud"
-	public function stockerFichier($origine, $nom, $dossier_destination) {
+	public function stockerFichier($infosFichier, $dossier_destination, $clef) {
 		$dossier_destination = $this->preparerCheminFichier($dossier_destination);
-		$nom = $this->desinfecterNomFichier($nom);
+		$clef = $this->desinfecterNomFichier($clef);
 		// tantantan taaaaan !!!!
-		$destination_finale = $dossier_destination.$nom;
-		echo $destination_finale."\n";
+		$destination_finale = $dossier_destination . $clef;
+		echo $destination_finale . "\n";
+		$origine = $infosFichier['tmp_name'];
 		$this->deplacerFichierSurDisque($origine, $destination_finale);
 	}
 	
