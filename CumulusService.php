@@ -161,11 +161,12 @@ class CumulusService {
 	/**
 	 * Envoie le fichier $file au client en forçant le téléchargement; s'il
 	 * s'agit d'une URL et non d'un fichier stocké, redirige vers cette URL
+	 * @TODO gérer les "range" pour pouvoir interrompre / reprendre un téléchargement
+	 * => http://www.media-division.com/the-right-way-to-handle-file-downloads-in-php/
 	 * @param type $file
 	 */
 	protected function sendFile($file, $mimetype='application/octet-stream') {
 		// fichier stocké ou référence vers une URL ?
-		echo "Chemin : $file<br/>";
 		if (preg_match('`https?://`', $file) != false) {
 			// URL => redirection
 			header('Location: ' . $file);
@@ -180,8 +181,15 @@ class CumulusService {
 			header('Cache-Control: must-revalidate');
 			header('Pragma: public');
 			header('Content-Length: ' . filesize($file));
-			// envoi du contenu
-			readfile($file);
+			// envoi progressif du contenu
+			// http://www.media-division.com/the-right-way-to-handle-file-downloads-in-php/
+			set_time_limit(0);
+			$f = @fopen($file,"rb");
+			while(!feof($f)) {
+				print(@fread($f, 1024*8));
+				ob_flush();
+				flush();
+			}
 		}
 		exit;
 	}
@@ -217,11 +225,17 @@ class CumulusService {
 
 	/**
 	 * Recherche le paramètre $name dans $this->params; s'il est défini (même
-	 * vide), renvoie sa valeur; s'il n'est pas défini, retourne $default
+	 * vide), renvoie sa valeur; s'il n'est pas défini, retourne $default; si
+	 * $collection est un tableau non vide, les paramètres seront cherchés dans
+	 * celui-ci plutôt que dans $this->params (mode 2 en 1 cracra)
 	 */
-	protected function getParam($name, $default=null) {
-		if (isset($this->params[$name])) {
-			return $this->params[$name];
+	protected function getParam($name, $default=null, $collection=null) {
+		$arrayToSearch = $this->params;
+		if (is_array($collection) && !empty($collection)) {
+			$arrayToSearch = $collection;
+		}
+		if (isset($arrayToSearch[$name])) {
+			return $arrayToSearch[$name];
 		} else {
 			return $default;
 		}
@@ -545,43 +559,141 @@ class CumulusService {
 	 * attributs
 	 */
 	protected function put() {
-		$key = array_pop($this->resources);
-		$path = implode('/', $this->resources);
-		$file = null;
-		$keywords = $this->getParam('keywords');
-		$meta = $this->getParam('meta');
-
-		if (! empty($_FILES['file'])) {
-			// envoi avec multipart/form-data
-			$file = $_FILES['file'];
-		} // sinon envoi en flux, contenu du fichier dans le corps de la requête
-
-		echo "PUT: [$file] [$path] [$key] [$keywords] [$meta]";
-
-		$this->lib->updateByKey($file, $path, $key, $keywords, $meta);
+		$this->sendError("PUT is not supported at the moment", 405);
 	}
 
 	/**
-	 * Ajoute un fichier et renvoie sa clef et ses attributs
+	 * Copie le corps de la requête dans un fichier temporaire et retourne un
+	 * tableau partiellement compatible avec le format de $_FILES
+	 */
+	protected function copyRequestBodyToTmpFile() {
+		// flux en mode binaire
+		$stream = fopen('php://input', 'rb');
+		$tmpFileName = '/tmp/' . md5(microtime());
+		$tmpFile = fopen($tmpFileName, 'wb');
+
+		// écriture progressive pour économiser la mémoire p/r file_put_contents
+		while (!feof($stream)) {
+		   $buffer = fread($stream, 4096); // 4096... ça ou autre chose...
+		   fwrite($tmpFile, $buffer);
+		}
+		// fermeture propre
+		fclose($stream);
+		fclose($tmpFile);
+
+		// si le fichier contient quelque chose on le renvoie, sinon on le
+		// supprime et on renvoie false
+		$fileSize = filesize($tmpFileName);
+		$stats = false;
+		if ($fileSize == 0) {
+			unlink($tmpFileName);
+		} else {
+			$stats = array(
+				'tmp_name' => $tmpFileName,
+				'size' => $fileSize
+			);
+		}
+		return $stats;
+	}
+
+	/**
+	 * Décode le contenu du fichier, encodé en base 64, et l'écrit dans un
+	 * fichier temporaire; retourne un tableau partiellement compatible avec le
+	 * format de $_FILES
+	 * @TODO accepter un pointeur pour les gros fichiers (nécessite d'abord de
+	 *		modifier readRequestBody()), pour économiser la mémoire
+	 */
+	protected function copyBase64ToTmpFile(&$base64FileContents) {
+		if (empty($base64FileContents)) {
+			return false;
+		}
+
+		// décodage de la base64
+		$decodedFileContents = base64_decode($base64FileContents);
+
+		// écriture du fichier temporaire
+		$tmpFileName = '/tmp/' . md5(microtime());
+		file_put_contents($tmpFileName, $decodedFileContents);
+
+		$stats = array(
+			'tmp_name' => $tmpFileName,
+			'size' => filesize($tmpFileName)
+		);
+		return $stats;
+	}
+	
+
+	/**
+	 * Lit et retourne le contenu du corps de la requête
+	 */
+	protected function readRequestBody() {
+		// @TODO attention à la conso mémoire, mais peut-on faire autrement pour
+		// extraire seulement le paramètre "file" et l'écrire dans un fichier
+		// temporaire ?
+		$contents = file_get_contents('php://input');
+		return $contents;
+	}
+
+	/**
+	 * Ajoute un fichier et renvoie sa clef et ses attributs; si aucun fichier
+	 * n'est spécifié, modifie les métadonnées de la clef ciblée
 	 */
 	protected function post() {
+		$key = array_pop($this->resources);
 		$path = implode('/', $this->resources);
-		$file = null;
-		$key = $this->getParam('key');
-		$keywords = $this->getParam('keywords');
-		$groups = $this->getParam('groups');
+
+		// extraction des paramètres POST
+		$keywords = explode(',', $this->getParam('keywords'));
+		$groups = explode(',', $this->getParam('groups'));
+		$permissions = $this->getParam('permissions');
 		$license = $this->getParam('license');
-		$meta = $this->getParam('meta');
+		$meta = json_decode($this->getParam('meta'), true);
 
 		if (! empty($_FILES['file'])) {
 			// envoi avec multipart/form-data
 			$file = $_FILES['file'];
-		} // sinon envoi en flux (contenu du fichier dans le corps de la requête)
+		} else {
+			$isJSON = strtolower(substr($_SERVER["CONTENT_TYPE"], 0, 16)) == 'application/json';
+			if ($isJSON) { // fichier en base64 dans le paramètre "file"
+				$requestBody = $this->readRequestBody();
+				$jsonData = json_decode($requestBody, true);
 
-		echo "POST: [$path] [$key] [$keywords] [$groups] [$license] [$meta]";
+				// extraction des paramètres
+				$keywords = $this->getParam('keywords', null, $jsonData);
+				$groups = $this->getParam('groups', null, $jsonData);
+				$permissions = $this->getParam('permissions', null, $jsonData);
+				$license = $this->getParam('license', null, $jsonData);
+				$meta = $this->getParam('meta', null, $jsonData);
+
+				// copie du contenu base64 dans un fichier temporaire
+				$file = $this->copyBase64ToTmpFile($jsonData['file']);
+			} else { // fichier dans le corps de la requête
+				$file = $this->copyRequestBodyToTmpFile();
+			}
+		}
+
+		/*echo "POST: [$path] [$key] [$permissions] [$license]\n";
+		echo "KW: " . print_r($keywords, true) . "\n";
+		echo "GP: " . print_r($groups, true) . "\n";
+		echo "MT: " . print_r($meta, true) . "\n";
+		echo "Content-type : " . $_SERVER["CONTENT_TYPE"] . "\n";
 		print_r($file);
+		echo "\n";*/
 
-		$this->lib->addFile($file, $path, $key, $keywords, $groups, $license, $meta);
+		$info = false;
+		if ($file == null) {
+			// mise à jour métadonnées seulement
+			$info = $this->lib->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
+		} else {
+			// ajout / mise à jour de fichier
+			$info = $this->lib->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+		}
+
+		if ($info == false) {
+			$this->sendError("error while sending file");
+		} else {
+			$this->sendJson($info);
+		}
 	}
 
 	/**

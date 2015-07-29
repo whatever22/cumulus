@@ -133,19 +133,20 @@ class Cumulus implements CumulusInterface {
 
 	/**
 	 * Ajoute le fichier $file au stock, dans le chemin $path, avec la clef $key,
-	 * les mots-clefs $keywords (séparés par des virgules) et les métadonnées
-	 * $meta (portion de JSON libre); si $key est null, une clef sera attribuée
+	 * les mots-clefs $keywords (séparés par des virgules), les groupes $groupes
+	 * (séparés par des virgules), les permissions $permissions, la licence
+	 * $license et les métadonnées $meta (portion de JSON libre). Si le fichier
+	 * existe déjà, il sera remplacé
 	 */
-	public function addFile($file, $path, $key=null, $keywords=null, $groups=null, $license=null, $meta=null) {
-		return $this->adapter->addFile($file, $path, $key, $keywords, $groups, $license, $meta);
+	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		return $this->adapter->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**
-	 * Remplace le contenu (si $file est spécifié) et / ou les métadonnées du
-	 * fichier $key situé dans $path
+	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
-	public function updateByKey($file, $path, $key, $keywords=null, $meta=null) {
-		return $this->adapter->updateByKey($file, $path, $key, $keywords, $meta);
+	public function updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta) {
+		return $this->adapter->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**

@@ -15,7 +15,7 @@ class StockageTB implements CumulusInterface {
 	protected $db;
 
 	/** Lib stockage sur disque */
-	protected $stockageDisque;
+	protected $diskStorage;
 
 	/** Inverseur de critères: si true, les méthodes GET retourneront tous les
 		résultats qui NE correspondent PAS aux critères demandés */
@@ -31,7 +31,7 @@ class StockageTB implements CumulusInterface {
 		$this->db = new PDO($dsn, $DB['username'], $DB['password']);
 
 		// lib de stockage sur disque
-		$this->stockageDisque = new StockageDisque();
+		$this->diskStorage = new StockageDisque();
 
 		// pour ne pas récupérer les valeurs en double (indices numériques + texte)
 		$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
@@ -403,26 +403,50 @@ class StockageTB implements CumulusInterface {
 
 	/**
 	 * Ajoute le fichier $file au stock, dans le chemin $path, avec la clef $key,
-	 * les mots-clefs $keywords (séparés par des virgules) et les métadonnées
-	 * $meta (portion de JSON libre) si $key est null, une clef sera attribuée
+	 * les mots-clefs $keywords (séparés par des virgules), les groupes $groupes
+	 * (séparés par des virgules), les permissions $permissions, la licence
+	 * $license et les métadonnées $meta (portion de JSON libre). Si le fichier
+	 * existe déjà, il sera remplacé
 	 */
-	public function addFile($file, $path, $key=null, $keywords=null, $groups=null, $license=null, $meta=null ) {
-		if ($file === null) {
-			// envoi dans le corps de la requête
-			$requestBody = file_get_contents("php://input");
-			//var_dump($entityBody);
-			// écriture dans le fichier de destination
-			$this->stockageDisque->stockerContenuFichier($requestBody, $name, $path);
+	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		// cas d'erreurs
+		if (empty($file)) {
+			throw new Exception('file must be specified');
 		} else {
-			// déplacement du fichier temporaire envoyé par multipart/form-data
+			if (! isset($file['size']) || $file['size'] == 0) {
+				throw new Exception('file is empty');
+			}
+		}
+		if ($key == null) {
+			throw new Exception('key must be specified');
+		}
+		// écriture du fichier temporaire dans le fichier de destination
+		$storageInfo = $this->diskStorage->stockerContenuFichier($file, $path, $key);
+		// si ça s'est bien passé, isnertion dans la BD
+		if ($storageInfo != false) {
+			$q = "INSERT INTO cumulus_files VALUES ('$key', '$key', '$path'"
+				. ", '" . $storageInfo['path'] . "', '" . $storageInfo['mimetype']
+				. "', NULL, '" . implode(',', $groups) . "', '$permissions'"
+				. ", '" . implode(',', $keywords) . "', '$license'"
+				. ", '" . json_encode($meta) . "', DEFAULT, DEFAULT)";
+			echo "QUERY : $q\n";
+			exit;
+			$r = $this->db->query($q);
+			if ($r != false) {
+				$data = $r->fetchAll();
+				$this->decodeMeta($data);
+				return $data;
+			}
+			return false;
 		}
 	}
 
 	/**
-	 * Remplace le contenu (si $file est spécifié) et / ou les métadonnées du
-	 * fichier $key situé dans $path
+	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
-	public function updateByKey($file, $path, $key, $keywords=null, $meta=null ) {}
+	public function updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta) {
+		
+	}
 
 	/**
 	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne
@@ -440,7 +464,7 @@ class StockageTB implements CumulusInterface {
 			if ($keepFile == false) {
 				// destruction du fichier
 				$diskPath = $fileInfo['storage_path'];
-				$deletedFromDisk = $this->stockageDisque->supprimerFichier($diskPath);
+				$deletedFromDisk = $this->diskStorage->supprimerFichier($diskPath);
 				if ($deletedFromDisk == false) {
 					throw new Exception('unable to delete file from disk');
 				}
