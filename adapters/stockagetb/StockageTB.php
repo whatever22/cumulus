@@ -31,7 +31,7 @@ class StockageTB implements CumulusInterface {
 		$this->db = new PDO($dsn, $DB['username'], $DB['password']);
 
 		// lib de stockage sur disque
-		$this->diskStorage = new StockageDisque();
+		$this->diskStorage = new StockageDisque($this->config);
 
 		// pour ne pas récupérer les valeurs en double (indices numériques + texte)
 		$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
@@ -79,6 +79,17 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Utilise PDO::quote mais gèr les valeurs NULL
+	 */
+	protected function quote($value) {
+		if ($value === null) {
+			return 'NULL';
+		} else {
+			return $this->db->quote($value);
+		}
+	}
+
+	/**
 	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
 	 * devront être inversés
 	 */
@@ -99,7 +110,7 @@ class StockageTB implements CumulusInterface {
 		$clauses = array();
 		$clauses[] = "fkey = '$key'";
 		if (! empty($path)) {
-			$clauses[] = "path = '/$path'";
+			$clauses[] = "path = '$path'";
 		}
 		$clausesString = implode(" AND ", $clauses);
 
@@ -428,7 +439,8 @@ class StockageTB implements CumulusInterface {
 			// si l'insertion s'est bien passée
 			if ($insertInfo != false) {
 				// re-lecture de toutes les infos (mode fainéant)
-				return $this->getAttributesByKey($path, $key);
+				$info = $this->getAttributesByKey($path, $key);
+				return $info;
 			} else {
 				// sinon on détruit le fichier
 				$this->diskStorage->supprimerFichier($storageInfo['disk_path']);
@@ -442,21 +454,27 @@ class StockageTB implements CumulusInterface {
 	 * informations retournées par la couche de stockage sur disque
 	 */
 	protected function insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta) {
-		// requete @TODO proteger les entrées
-		$q = "INSERT INTO cumulus_files VALUES ('$key', '$key', '$path'"
-			. ", '" . $storageInfo['disk_path'] . "', '" . $storageInfo['mimetype']
-			. "', NULL, '" . implode(',', $groups) . "', '$permissions'"
-			. ", '" . implode(',', $keywords) . "', '$license'"
-			. ", '" . json_encode($meta) . "', DEFAULT, DEFAULT)";
-		echo "QUERY : $q\n";
-		exit;
-		$r = $this->db->query($q);
-		if ($r != false) {
-			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			return $data;
-		}
-		return false;
+		// protection des entrées
+		$key = $this->quote($key);
+		$path = $this->quote($path);
+		$keywords = $this->quote(implode(',', $keywords));
+		$groups = $this->quote(implode(',', $groups));
+		$permissions = $this->quote($permissions);
+		$license = $this->quote($license);
+		$meta = $this->quote($meta == null ? null : json_encode($meta));
+		$diskPath = $this->quote($storageInfo['disk_path']);
+		$mimetype = $this->quote($storageInfo['mimetype']);
+
+		// requete
+		$q = "INSERT INTO cumulus_files VALUES ($key, $key, $path"
+			. ", $diskPath, $mimetype, NULL, $groups, $permissions"
+			. ", $keywords, $license, $meta, DEFAULT, DEFAULT)";
+		//echo "QUERY : $q\n";
+
+		$r = $this->db->exec($q);
+
+		// 1 ligne doit être affectée
+		return ($r == 1);
 	}
 
 	/**
@@ -475,7 +493,7 @@ class StockageTB implements CumulusInterface {
 		// si le fichier existe dans la base de données
 		if ($fileInfo != false) {
 			// suppression de l'entrée dans la base de données
-			$deletedFromDb = $this->deleteFileEntry($path, $key);
+			$deletedFromDb = $this->deleteFileReference($path, $key);
 			if ($deletedFromDb == false) {
 				throw new Exception('unable to delete file entry from database');
 			}
@@ -499,7 +517,7 @@ class StockageTB implements CumulusInterface {
 	/**
 	 * Supprime une entrée de fichier dans la base de données
 	 */
-	protected function deleteFileEntry($path, $key) {
+	protected function deleteFileReference($path, $key) {
 		if (empty($key)) {
 			return false;
 		}

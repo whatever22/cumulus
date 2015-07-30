@@ -45,19 +45,14 @@ class CumulusService {
 
 		// méthode HTTP
 		$this->verb = $_SERVER['REQUEST_METHOD'];
-		//echo "Method: " . $this->verb . PHP_EOL;
 
 		// config serveur
 		$this->domainRoot = $this->config['domain_root'];
 		$this->baseURI = $this->config['base_uri'];
-		//echo "Domain root: " . $this->domainRoot . PHP_EOL;
-		//echo "Base URI: " . $this->baseURI . PHP_EOL;
 
 		// initialisation
 		$this->getResources();
 		$this->getParams();
-		//print_r($this->resources);
-		//print_r($this->params);
 
 		$this->init();
 	}
@@ -66,26 +61,34 @@ class CumulusService {
 	protected function init() {
 	}
 
-	/** Reads the request and runs the appropriate method */
+	/**
+	 * Reads the request and runs the appropriate method; catches library
+	 * exceptions
+	 */
 	public function run() {
-		switch($this->verb) {
-			case "GET":
-				$this->get();
-				break;
-			case "POST":
-				$this->post();
-				break;
-			case "PUT":
-				$this->put();
-				break;
-			case "DELETE":
-				$this->delete();
-				break;
-			case "OPTIONS":
-				$this->options();
-				break;
-			default:
-				$this->sendError("unrecognized method: $this->verb");
+		try {
+			switch($this->verb) {
+				case "GET":
+					$this->get();
+					break;
+				case "POST":
+					$this->post();
+					break;
+				case "PUT":
+					$this->put();
+					break;
+				case "DELETE":
+					$this->delete();
+					break;
+				case "OPTIONS":
+					$this->options();
+					break;
+				default:
+					$this->sendError("unrecognized method: $this->verb");
+			}
+		} catch(Exception $e) {
+			// récupère les exceptions des lib et les transforme en erreur 500
+			$this->sendError($e->getMessage(), 500);
 		}
 	}
 
@@ -125,7 +128,7 @@ class CumulusService {
 			$this->sendError($errorMessage, $errorCode);
 		} else {
 			// création des liens de téléchargement
-			$this->buildLinks($results);
+			$this->buildLinksAndRemoveStoragePaths($results);
 			$this->sendJson(
 				array(
 					"count" => count($results),
@@ -136,13 +139,14 @@ class CumulusService {
 	}
 
 	/**
-	 * Ajoutant un lien de téléchargement "href" à chaque fichier du jeu de
-	 * données
+	 * Ajoute un lien de téléchargement "href" à chaque fichier du jeu de
+	 * données, et supprime la valeur de "storage_path" (par sécurité)
 	 * @param type $results
 	 */
-	protected function buildLinks(&$results) {
+	protected function buildLinksAndRemoveStoragePaths(&$results) {
 		foreach ($results as &$r) {
 			$r['href'] = $this->buildLink($r['fkey'], $r['path']);
+			unset($r['storage_path']);
 		}
 	}
 
@@ -322,7 +326,7 @@ class CumulusService {
 	 */
 	protected function getByKey() {
 		$key = array_pop($this->resources);
-		$path = implode('/', $this->resources);
+		$path = '/' . implode('/', $this->resources);
 
 		//echo "getByKey : [$path] [$key]\n";
 		$file = $this->lib->getByKey($path, $key);
@@ -640,7 +644,7 @@ class CumulusService {
 	 */
 	protected function post() {
 		$key = array_pop($this->resources);
-		$path = implode('/', $this->resources);
+		$path = '/' . implode('/', $this->resources);
 
 		// extraction des paramètres POST
 		$keywords = explode(',', $this->getParam('keywords'));
@@ -688,6 +692,7 @@ class CumulusService {
 			// ajout / mise à jour de fichier
 			$info = $this->lib->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 		}
+		echo "INFO: "; var_dump($info); echo "\n";
 
 		if ($info == false) {
 			$this->sendError("error while sending file");

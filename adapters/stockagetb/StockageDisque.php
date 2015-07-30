@@ -1,31 +1,24 @@
 <?php
 
 class StockageDisque {
-	
-	// attention $racine_fichiers doit contenir un slash terminal
-	protected $racine_fichiers = "/home/aurelien/web/cumulus/files/";
-	protected $droits = 0755;
-	protected $ds = DIRECTORY_SEPARATOR;
-	
-	public function getCheminFichier($chemin_relatif) {
-		return $this->racine_fichiers.$this->desinfecterCheminFichier($chemin_relatif);
-	}
-	
-	public function getContenuDossier($chemin_dossier) {
-		$fichiers = scandir($this->getCheminDossierComplet($chemin_dossier));
-		return array_diff($fichiers, array('..', '.'));
-	}
-	
-	public function getFichiersADossier($chemin_dossier) {
-		return array_filter(glob($this->getCheminDossierComplet($chemin_dossier).'*'), 'is_dir');
-	}
 
-	public function getDossiersADossier($chemin_dossier) {
-		return array_filter(glob($this->getCheminDossierComplet($chemin_dossier).'*'), 'is_file');
-	}
-	
-	protected function getCheminDossierComplet($chemin_dossier) {
-		return $this->racine_fichiers.$this->desinfecterCheminFichier($chemin_dossier);
+	/** Config passée par StockageTB.php */
+	protected $config;
+
+	/** Chemin de base du répertoire de stockage */
+	protected $racine_stockage;
+
+	/** Droits affectés aux nouveaux dossiers */
+	protected $droits = 0755;
+
+	protected $ds = DIRECTORY_SEPARATOR;
+
+	public function __construct($config) {
+		$this->config = $config;
+
+		$this->racine_stockage = $config['adapters']['StockageTB']['storage_root'];
+		// s'assure que le chemin finit par un "/"
+		$this->racine_stockage = rtrim($this->racine_stockage, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 	}
 
 	/**
@@ -36,20 +29,42 @@ class StockageDisque {
 	public function supprimerFichier($chemin) {
 		return unlink($chemin);
 	}
-	
-	// $origine est un chemin complet, absolu d'un fichier
-	// $dossier_destination est un nom de dossier relatif au "cloud"
-	public function stockerFichier($infosFichier, $dossier_destination, $clef) {
-		$dossier_destination = $this->preparerCheminFichier($dossier_destination);
+
+	/**
+	 * Copie un fichier temporaire défini par $infosFichier dans le chemin
+	 * $cheminDossier du stockage, et le nomme $clef
+	 * @param type $infosFichier un tableau partiellement compatible avec $_FILES
+	 *		(doit contenir "tmp_name")
+	 * @param type $cheminDossier dossier parent, relatif à la racine du stockage
+	 * @param type $clef clef ou nom du fichier
+	 */
+	public function stockerFichier($infosFichier, $cheminDossier, $clef) {
+		$cheminDossier = $this->preparerCheminDossier($cheminDossier);
 		$clef = $this->desinfecterNomFichier($clef);
 		// tantantan taaaaan !!!!
-		$destination_finale = $dossier_destination . $clef;
-		echo $destination_finale . "\n";
+		$destination_finale = $cheminDossier . $clef;
+
+		// déplacement du fichier temporaire
 		$origine = $infosFichier['tmp_name'];
-		$this->deplacerFichierSurDisque($origine, $destination_finale);
+		if (! $this->deplacerFichierSurDisque($origine, $destination_finale)) {
+			throw new Exception('error while moving file');
+		}
+		
+		// détection du mimetype
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		$mimetype = finfo_file($finfo, $destination_finale);
+		finfo_close($finfo);
+
+		return array(
+			'disk_path' => $destination_finale,
+			'mimetype' => $mimetype
+		);
 	}
-	
-	// $origine et $destination sont des chemins de fichiers absolus
+
+	/**
+	 * Déplace le fichier $origine (chemin absolu) vers $destination (chemin
+	 * absolu)
+	 */
 	protected function deplacerFichierSurDisque($origine, $destination) {
 		$deplacement = false;
 		if(is_uploaded_file($origine)) {
@@ -60,39 +75,54 @@ class StockageDisque {
 		
 		return $deplacement;
 	}	
-	
-	protected function preparerCheminFichier($dossier_destination) {	
-		
-		$dossier_destination = $this->desinfecterCheminFichier($dossier_destination);				
-		$chemin_dossier_complet = $this->racine_fichiers.$dossier_destination;
-		
+
+	/**
+	 * Normalise et transforme un chemin relatif au stockage en chemin absolu;
+	 * crée ce dossier si besoin; retourne le chemin absolu si tout s'est bien
+	 * passé, false sinon
+	 */
+	protected function preparerCheminDossier($dossier_destination) {	
+		// normalisation du chemin du dossier parent
+		$dossier_destination = $this->desinfecterCheminDossier($dossier_destination);				
+		$chemin_dossier_complet = $this->racine_stockage . $dossier_destination;
+		//echo "DD 3 : $chemin_dossier_complet\n";
+
+		// création du dossier parent si besoin
 		if(!is_dir($chemin_dossier_complet)) {
 			$ok = mkdir($chemin_dossier_complet, $this->droits, true);
 			$chemin_dossier_complet = $ok ? $chemin_dossier_complet : false;		
 		}
-		
+
 		return $chemin_dossier_complet;
 	}
-		
-	protected function desinfecterCheminFichier($chemin) {
+
+	/**
+	 * Supprime les motifs potentiellements dangereux dans un chemin de dossier,
+	 * comme ".." ou plusieurs "/" à la suite; s'assure que 
+	 */
+	protected function desinfecterCheminDossier($chemin) {
 		// pour le moment on supprime les occurences de .. dans les dossiers et les // ou /// etc...
 		$chemin = preg_replace("([\.]{2,})", '', $chemin);
-		$chemin = preg_replace('/(\/+)/','/', $chemin);
-		
+		$ds = preg_quote(DIRECTORY_SEPARATOR, '#'); // censé être cross-OS
+		$chemin = preg_replace("#($ds+)#", '/', $chemin);
 		// retire le séparateur de dossier de gauche s'il est présent et s'assure que celui de droite existe
-		$chemin = ltrim(rtrim($chemin, $this->ds), $this->ds).$this->ds;
+		$chemin = trim($chemin, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 		
 		return $chemin;
 	}
-	
-	// http://stackoverflow.com/questions/2021624/string-sanitizer-for-filename
+
+	/**
+	 * Supprime les motifs potentiellements dangereux dans un nom de fichier,
+	 * comme ".." ou les caractères chelous @TODO vérifier cette définition !
+	 * http://stackoverflow.com/questions/2021624/string-sanitizer-for-filename
+	 */
 	protected function desinfecterNomFichier($nom) {
 		// Remove anything which isn't a word, whitespace, number
 		// or any of the following caracters -_~,;:[]().
 		$nom = preg_replace("([^\w\s\d\-_~,;:\[\]\(\).])", '', $nom);
 		// Remove any runs of periods (thanks falstro!)
 		$nom = preg_replace("([\.]{2,})", '', $nom);
-		
+
 		return $nom;
 	}
-} 
+}
