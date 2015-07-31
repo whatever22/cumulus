@@ -1,5 +1,9 @@
 <?php
 
+/**
+ * Couche de stockage basique sur système de fichiers - les chemins sont
+ * conservés sur le SdF
+ */
 class StockageDisque {
 
 	/** Config passée par StockageTB.php */
@@ -27,7 +31,11 @@ class StockageDisque {
 	 * @return type
 	 */
 	public function supprimerFichier($chemin) {
-		return unlink($chemin);
+		$ok = unlink($chemin);
+		if (! $ok) {
+			throw new Exception('disk storage: cannot delete file');
+		}
+		return $ok;
 	}
 
 	/**
@@ -47,7 +55,7 @@ class StockageDisque {
 		// déplacement du fichier temporaire
 		$origine = $infosFichier['tmp_name'];
 		if (! $this->deplacerFichierSurDisque($origine, $destination_finale)) {
-			throw new Exception('error while moving file');
+			throw new Exception('disk storage: cannot move temporary file');
 		}
 		
 		// détection du mimetype
@@ -85,12 +93,13 @@ class StockageDisque {
 		// normalisation du chemin du dossier parent
 		$dossier_destination = $this->desinfecterCheminDossier($dossier_destination);				
 		$chemin_dossier_complet = $this->racine_stockage . $dossier_destination;
-		//echo "DD 3 : $chemin_dossier_complet\n";
 
 		// création du dossier parent si besoin
 		if(!is_dir($chemin_dossier_complet)) {
 			$ok = mkdir($chemin_dossier_complet, $this->droits, true);
-			$chemin_dossier_complet = $ok ? $chemin_dossier_complet : false;		
+			if (! $ok) {
+				throw new Exception('disk storage: cannot create directory');
+			}
 		}
 
 		return $chemin_dossier_complet;

@@ -5,6 +5,14 @@ require 'StockageDisque.php';
 /**
  * Adapteur par défaut de la couche de stockage de Cumulus - utilise une base de
  * données MySQL
+ * 
+ * ATTENTION - on considère que la clef primaire est (fkey,path) et on ne fait
+ * pas de vérifications d'unicité dans le code; cependant, la limitation de la
+ * taille de clef d'InnoDB à 767 octets implique de fortes limitations sur les
+ * tailles de chemin (path) et de nom de fichier (fkey) maximales
+ * 
+ * @TODO considérer l'utilisation d'une clef (fkey) qui ne soit pas le nom de
+ * fichier, et utiliser seulement cette colonne comme clef primaire
  */
 class StockageTB implements CumulusInterface {
 
@@ -114,7 +122,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByKey($path, $key) {
 		if (empty($key)) {
-			return false;
+			throw new Exception('storage: no file key specified');
 		}
 
 		// clauses
@@ -145,7 +153,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByName($name, $strict=false) {
 		if (empty($name)) {
-			return false;
+			throw new Exception('storage: no name specified');
 		}
 
 		// clauses
@@ -163,7 +171,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByPath($path, $recursive=false) {
 		if (empty($path)) {
-			return false;
+			throw new Exception('storage: no path specified');
 		}
 
 		// clauses
@@ -183,7 +191,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByKeywords($keywords, $mode="AND") {
 		if (empty($keywords)) {
-			return false;
+			throw new Exception('storage: no keyword specified');
 		}
 
 		// clauses
@@ -217,7 +225,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByGroups($groups, $mode="AND") {
 		if (empty($groups)) {
-			return false;
+			throw new Exception('storage: no group specified');
 		}
 
 		// clauses
@@ -248,7 +256,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByUser($user) {
 		if (empty($user)) {
-			return false;
+			throw new Exception('storage: no user specified');
 		}
 		// clauses
 		$clause = "owner = '$user'";
@@ -261,7 +269,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByMimetype($mimetype) {
 		if (empty($mimetype)) {
-			return false;
+			throw new Exception('storage: no mimetype specified');
 		}
 		// clauses
 		$clause = "mimetype = '$mimetype'";
@@ -274,7 +282,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByLicense($license) {
 		if (empty($license)) {
-			return false;
+			throw new Exception('storage: no license specified');
 		}
 		// clauses
 		$clause = "license = '$license'";
@@ -290,13 +298,13 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function getByDate($dateColumn, $date1, $date2, $operator="=") {
 		if (empty($date1)) {
-			return false;
+			throw new Exception('storage: no date specified');
 		}
 		if (!in_array($operator, array("=", "<", ">"))) {
-			return false;
+			throw new Exception('storage: operator must be < or > or =');
 		}
 		if (! in_array($dateColumn, array(self::COLUMN_CREATION_DATE, self::COLUMN_LAST_MODIFICATION_DATE))) {
-			return false;
+			throw new Exception('storage: column must be ' . self::COLUMN_CREATION_DATE . ' or ' . self::COLUMN_LAST_MODIFICATION_DATE);
 		}
 
 		// clauses
@@ -320,7 +328,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function search($searchParams=array()) {
 		if (empty($searchParams)) {
-			return false;
+			throw new Exception('storage: no search parameters specified');
 		}
 		// clauses @TODO factoriser avec les méthodes de recherche spécifiques
 		// (pas si simple)
@@ -433,14 +441,14 @@ class StockageTB implements CumulusInterface {
 	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// cas d'erreurs
 		if (empty($file)) {
-			throw new Exception('file must be specified');
+			throw new Exception('storage: no file specified');
 		} else {
 			if (! isset($file['size']) || $file['size'] == 0) {
-				throw new Exception('file is empty');
+				throw new Exception('storage: file is empty');
 			}
 		}
 		if ($key == null) {
-			throw new Exception('key must be specified');
+			throw new Exception('storage: no key specified');
 		}
 		// écriture du fichier temporaire dans le fichier de destination, si ce
 		// n'est pas une référence sur URL
@@ -477,7 +485,7 @@ class StockageTB implements CumulusInterface {
 				$info = $this->getAttributesByKey($path, $key);
 				return $info;
 			} else {
-				// sinon on détruit le fichier; si ce n'est pas une référence
+				// sinon on détruit le fichier, si ce n'est pas une référence
 				if (isset($file['tmp_name'])) {
 					$this->diskStorage->supprimerFichier($storageInfo['disk_path']);
 				}
@@ -509,7 +517,6 @@ class StockageTB implements CumulusInterface {
 		//echo "QUERY : $q\n";
 
 		$r = $this->db->exec($q);
-
 		// 1 ligne doit être affectée
 		return ($r == 1);
 	}
@@ -555,7 +562,6 @@ class StockageTB implements CumulusInterface {
 			//echo "QUERY : $q\n";
 
 			$r = $this->db->exec($q);
-
 			// 1 ligne doit être affectée
 			return ($r == 1);
 		}
@@ -568,13 +574,13 @@ class StockageTB implements CumulusInterface {
 	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// cas d'erreurs
 		if ($key == null) {
-			throw new Exception('key must be specified');
+			throw new Exception('storage: no key specified');
 		}
 		// mise à jour
 		$existingFile = $this->getByKey($path, $key);
 		// si la référence du fichier existe déjà dans la bdd
 		if ($existingFile == false) {
-			throw new Exception('file entry not found');
+			throw new Exception('storage: file entry not found');
 		} else {
 			// mise à jour
 			$updateInfo = $this->updateFileReference(null, $path, $key, $keywords, $groups, $permissions, $license, $meta);
@@ -585,7 +591,7 @@ class StockageTB implements CumulusInterface {
 			$info = $this->getAttributesByKey($path, $key);
 			return $info;
 		} else {
-			throw new Exception('update failed');
+			throw new Exception('storage: update failed');
 		}
 		return false;
 	}
@@ -601,15 +607,12 @@ class StockageTB implements CumulusInterface {
 			// suppression de l'entrée dans la base de données
 			$deletedFromDb = $this->deleteFileReference($path, $key);
 			if ($deletedFromDb == false) {
-				throw new Exception('unable to delete file entry from database');
+				throw new Exception('storage: cannot delete file entry from database');
 			}
 			if ($keepFile == false) {
 				// destruction du fichier
 				$diskPath = $fileInfo['storage_path'];
-				$deletedFromDisk = $this->diskStorage->supprimerFichier($diskPath);
-				if ($deletedFromDisk == false) {
-					throw new Exception('unable to delete file from disk');
-				}
+				$this->diskStorage->supprimerFichier($diskPath);
 			}
 			return array(
 				"deleted" => true,
@@ -625,7 +628,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	protected function deleteFileReference($path, $key) {
 		if (empty($key)) {
-			return false;
+			throw new Exception('storage: no key specified');
 		}
 
 		// clauses

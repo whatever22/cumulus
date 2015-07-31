@@ -21,7 +21,7 @@ class Cumulus implements CumulusInterface {
 		if (file_exists(self::$CHEMIN_CONFIG)) {
 			$this->config = json_decode(file_get_contents(self::$CHEMIN_CONFIG), true);
 		} else {
-			throw new Exception("Le fichier " . self::$CHEMIN_CONFIG . " n'existe pas");
+			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
 		}
 
 		// adapteur
@@ -29,7 +29,7 @@ class Cumulus implements CumulusInterface {
 		$adapterDir = strtolower($adapterName);
 		$adapterPath = 'adapters/' . $adapterDir . '/' . $adapterName . '.php';
 		if (strpos($adapterName, "..") != false || $adapterName == '' || ! file_exists($adapterPath)) {
-			throw new Exception ("L'adapteur " . $adapterPath . " n'existe pas");
+			throw new Exception ("adapter " . $adapterPath . " doesn't exist");
 		}
 		require $adapterPath;
 		// on passe la config à l'adapteur - à lui de stocker ses paramètres

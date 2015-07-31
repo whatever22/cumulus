@@ -40,7 +40,7 @@ class CumulusService {
 		if (file_exists(self::$CONFIG_PATH)) {
 			$this->config = json_decode(file_get_contents(self::$CONFIG_PATH), true);
 		} else {
-			throw new Exception("Le fichier " . self::$CHEMIN_CONFIG . " n'existe pas");
+			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
 		}
 
 		// lib Cumulus

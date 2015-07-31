@@ -2,6 +2,9 @@
 
 /**
  * Interface que tout adapteur de stockage doit implémenter
+ * 
+ * Utiliser les Exceptions pour déclencher des erreurs - elles seront récupérées
+ * par le service REST et transformées en erreurs HTTP
  */
 interface CumulusInterface {
 
