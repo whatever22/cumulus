@@ -17,6 +17,9 @@ class CumulusService {
 	/** Autodocumentation en JSON */
 	public static $AUTODOC_PATH = "autodoc.json";
 
+	/** Motif d'expression régulière pour détecter les références de fichiers */
+	public static $REF_PATTERN = '`https?://`';
+
 	/** HTTP verb received (GET, POST, PUT, DELETE, OPTIONS) */
 	protected $verb;
 
@@ -117,11 +120,8 @@ class CumulusService {
 	}
 
 	/**
-	 * Renvoie plusieurs résultats $results dans un objet JSON, en ajoutant un
-	 * lien de téléchargement
-	 * @param type $results
-	 * @param type $errorMessage
-	 * @param type $errorCode
+	 * Renvoie plusieurs résultats $results dans un objet JSON, en remplaçant le
+	 * chemin de stockage par un lien de téléchargement
 	 */
 	protected function sendMultipleResults($results, $errorMessage="no results", $errorCode=404) {
 		if ($results == false) {
@@ -141,7 +141,6 @@ class CumulusService {
 	/**
 	 * Ajoute un lien de téléchargement "href" à chaque fichier du jeu de
 	 * données, et supprime la valeur de "storage_path" (par sécurité)
-	 * @param type $results
 	 */
 	protected function buildLinksAndRemoveStoragePaths(&$results) {
 		foreach ($results as &$r) {
@@ -167,11 +166,11 @@ class CumulusService {
 	 * s'agit d'une URL et non d'un fichier stocké, redirige vers cette URL
 	 * @TODO gérer les "range" pour pouvoir interrompre / reprendre un téléchargement
 	 * => http://www.media-division.com/the-right-way-to-handle-file-downloads-in-php/
-	 * @param type $file
+	 * @TODO demander la lecture du fichier à la couche du dessous
 	 */
 	protected function sendFile($file, $mimetype='application/octet-stream') {
 		// fichier stocké ou référence vers une URL ?
-		if (preg_match('`https?://`', $file) != false) {
+		if (preg_match(self::$REF_PATTERN, $file) != false) {
 			// URL => redirection
 			header('Location: ' . $file);
 		} else {
@@ -190,7 +189,7 @@ class CumulusService {
 			set_time_limit(0);
 			$f = @fopen($file,"rb");
 			while(!feof($f)) {
-				print(@fread($f, 1024*8));
+				print(fread($f, 1024*8));
 				ob_flush();
 				flush();
 			}
@@ -665,9 +664,25 @@ class CumulusService {
 		$license = $this->getParam('license');
 		$meta = json_decode($this->getParam('meta'), true);
 
-		if (! empty($_FILES['file'])) {
-			// envoi avec multipart/form-data
-			$file = $_FILES['file'];
+		$file = false;
+		// détection de la méthode d'envoi
+		$isMPFD = strtolower(substr($_SERVER["CONTENT_TYPE"], 0, 19)) == 'multipart/form-data';
+		if ($isMPFD) { // envoi de formulaire classique avec multipart/form-data
+			// détection : fichier ou référence (URL) ?
+			if (! empty($_FILES['file'])) {
+				// fichier uploadé
+				$file = $_FILES['file'];
+			} else {
+				// référence sur fichier
+				$fileParam = $this->getParam('file');
+				if (preg_match(self::$REF_PATTERN, $fileParam) != false) {
+					// référence
+					$file = array(
+						'url' => $fileParam,
+						'size' => count($fileParam)
+					);
+				} // sinon pas de fichier spécifié => modif de métadonnées
+			}
 		} else {
 			$isJSON = strtolower(substr($_SERVER["CONTENT_TYPE"], 0, 16)) == 'application/json';
 			if ($isJSON) { // fichier en base64 dans le paramètre "file"
@@ -681,8 +696,17 @@ class CumulusService {
 				$license = $this->getParam('license', null, $jsonData);
 				$meta = $this->getParam('meta', null, $jsonData);
 
-				// copie du contenu base64 dans un fichier temporaire
-				$file = $this->copyBase64ToTmpFile($jsonData['file']);
+				// détection : fichier ou référence (URL) ?
+				if (! empty($jsonData['file']) && (preg_match(self::$REF_PATTERN, $jsonData['file']) != false)) {
+					// référence
+					$file = array(
+						'url' => $jsonData['file'],
+						'size' => count($jsonData['file'])
+					);
+				} else {
+					// copie du contenu base64 dans un fichier temporaire
+					$file = $this->copyBase64ToTmpFile($jsonData['file']);
+				}
 			} else { // fichier dans le corps de la requête
 				$file = $this->copyRequestBodyToTmpFile();
 			}
@@ -696,7 +720,6 @@ class CumulusService {
 			// ajout / mise à jour de fichier
 			$info = $this->lib->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 		}
-		//echo "INFO: "; var_dump($info); echo "\n";
 
 		if ($info == false) {
 			$this->sendError("error while sending file");

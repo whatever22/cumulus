@@ -442,8 +442,19 @@ class StockageTB implements CumulusInterface {
 		if ($key == null) {
 			throw new Exception('key must be specified');
 		}
-		// écriture du fichier temporaire dans le fichier de destination
-		$storageInfo = $this->diskStorage->stockerFichier($file, $path, $key);
+		// écriture du fichier temporaire dans le fichier de destination, si ce
+		// n'est pas une référence sur URL
+		$storageInfo = false;
+		if (isset($file['tmp_name'])) { // fichier
+			$storageInfo = $this->diskStorage->stockerFichier($file, $path, $key);
+		} else if (isset($file['url'])) { // référence
+			$storageInfo = array(
+				'disk_path' => $file['url'],
+				'mimetype' => null
+			);
+		} else {
+			throw new Exception('invalid storageInfo');
+		}
 		// si ça s'est bien passé, insertion dans la BD
 		if ($storageInfo != false) {
 			$existingFile = $this->getByKey($path, $key);
@@ -454,6 +465,11 @@ class StockageTB implements CumulusInterface {
 			} else {
 				// mise à jour
 				$insertInfo = $this->updateFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+				// si on avait un fichier avant et qu'on le remplace par une
+				// référence, on détruit le fichier pour libérer de l'espace
+				if (isset($file['url'])) { // référence
+					$this->diskStorage->supprimerFichier($existingFile['storage_path']);
+				}
 			}
 			// si l'insertion / màj s'est bien passée
 			if ($insertInfo != false) {
@@ -461,8 +477,10 @@ class StockageTB implements CumulusInterface {
 				$info = $this->getAttributesByKey($path, $key);
 				return $info;
 			} else {
-				// sinon on détruit le fichier
-				$this->diskStorage->supprimerFichier($storageInfo['disk_path']);
+				// sinon on détruit le fichier; si ce n'est pas une référence
+				if (isset($file['tmp_name'])) {
+					$this->diskStorage->supprimerFichier($storageInfo['disk_path']);
+				}
 			}
 		}
 		return false;
