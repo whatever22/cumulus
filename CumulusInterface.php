@@ -92,7 +92,7 @@ interface CumulusInterface {
 	/**
 	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
-	public function updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
+	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null);
 
 	/**
 	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne

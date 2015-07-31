@@ -79,13 +79,24 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Utilise PDO::quote mais gèr les valeurs NULL
+	 * Utilise PDO::quote mais gère les valeurs NULL
 	 */
 	protected function quote($value) {
 		if ($value === null) {
 			return 'NULL';
 		} else {
 			return $this->db->quote($value);
+		}
+	}
+
+	/**
+	 * Version de implode() qui accepte NULL dans $pieces sans jeter de warning
+	 */
+	protected function implode($glue, $pieces) {
+		if ($pieces === null) {
+			return null;
+		} else {
+			return implode($glue, $pieces);
 		}
 	}
 
@@ -433,10 +444,18 @@ class StockageTB implements CumulusInterface {
 		}
 		// écriture du fichier temporaire dans le fichier de destination
 		$storageInfo = $this->diskStorage->stockerFichier($file, $path, $key);
-		// si ça s'est bien passé, isnertion dans la BD
+		// si ça s'est bien passé, insertion dans la BD
 		if ($storageInfo != false) {
-			$insertInfo = $this->insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
-			// si l'insertion s'est bien passée
+			$existingFile = $this->getByKey($path, $key);
+			// si la référence du fichier existe déjà dans la bdd
+			if ($existingFile == false) {
+				// insertion
+				$insertInfo = $this->insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+			} else {
+				// mise à jour
+				$insertInfo = $this->updateFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+			}
+			// si l'insertion / màj s'est bien passée
 			if ($insertInfo != false) {
 				// re-lecture de toutes les infos (mode fainéant)
 				$info = $this->getAttributesByKey($path, $key);
@@ -453,12 +472,12 @@ class StockageTB implements CumulusInterface {
 	 * Insère une référence de fichier dans la base de données, en fonction des
 	 * informations retournées par la couche de stockage sur disque
 	 */
-	protected function insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta) {
+	protected function insertFileReference($storageInfo, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// protection des entrées
 		$key = $this->quote($key);
 		$path = $this->quote($path);
-		$keywords = $this->quote(implode(',', $keywords));
-		$groups = $this->quote(implode(',', $groups));
+		$keywords = $this->quote($this->implode(',', $keywords));
+		$groups = $this->quote($this->implode(',', $groups));
 		$permissions = $this->quote($permissions);
 		$license = $this->quote($license);
 		$meta = $this->quote($meta == null ? null : json_encode($meta));
@@ -478,10 +497,79 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Insère une référence de fichier dans la base de données, en fonction des
+	 * informations retournées par la couche de stockage sur disque
+	 */
+	protected function updateFileReference($storageInfo, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		// protection des entrées
+		$key = $this->quote($key);
+		$path = $this->quote($path);
+
+		// ...et construction de la clause SET
+		$setClauses = array();
+		if ($keywords !== null) {
+			$setClauses[] = 'keywords=' . $this->quote(implode(',', $keywords));
+		}
+		if ($groups !== null) {
+			$setClauses[] = 'groups=' . $this->quote(implode(',', $groups));
+		}
+		if ($permissions !== null) {
+			$setClauses[] = 'permissions=' . $this->quote($permissions);
+		}
+		if ($license !== null) {
+			$setClauses[] = 'license=' . $this->quote($license);
+		}
+		if ($meta !== null) {
+			$setClauses[] = 'meta=' . $this->quote($meta == null ? null : json_encode($meta));
+		}
+		if (! empty($storageInfo)) {
+			$setClauses[] = 'storage_path=' . $this->quote($storageInfo['disk_path']);
+			$setClauses[] = 'mimetype=' . $this->quote($storageInfo['mimetype']);
+		}
+		$setClauses[] = 'last_modification_date=NOW()';
+
+		// agglomération de la clause SET
+		$setClausesString = implode(', ', $setClauses);
+		if ($setClausesString != '') {
+			// requete
+			$q = "UPDATE cumulus_files SET $setClausesString"
+				. " WHERE fkey=$key AND path=$path";
+			//echo "QUERY : $q\n";
+
+			$r = $this->db->exec($q);
+
+			// 1 ligne doit être affectée
+			return ($r == 1);
+		}
+		return false;
+	}
+
+	/**
 	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
-	public function updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta) {
-		throw new Exception('not implemented');
+	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		// cas d'erreurs
+		if ($key == null) {
+			throw new Exception('key must be specified');
+		}
+		// mise à jour
+		$existingFile = $this->getByKey($path, $key);
+		// si la référence du fichier existe déjà dans la bdd
+		if ($existingFile == false) {
+			throw new Exception('file entry not found');
+		} else {
+			// mise à jour
+			$updateInfo = $this->updateFileReference(null, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+		}
+		// si l'insertion / màj s'est bien passée
+		if ($updateInfo != false) {
+			// re-lecture de toutes les infos (mode fainéant)
+			$info = $this->getAttributesByKey($path, $key);
+			return $info;
+		} else {
+			throw new Exception('update failed');
+		}
+		return false;
 	}
 
 	/**
@@ -526,7 +614,7 @@ class StockageTB implements CumulusInterface {
 		$clauses = array();
 		$clauses[] = "fkey = '$key'";
 		if (! empty($path)) {
-			$clauses[] = "path = '/$path'";
+			$clauses[] = "path = '$path'";
 		}
 		$clausesString = implode(" AND ", $clauses);
 

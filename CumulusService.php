@@ -639,6 +639,18 @@ class CumulusService {
 	}
 
 	/**
+	 * Version de explode() qui préserve les valeurs NULL - permet de
+	 * différencier '' de NULL dans les paramètres multiples comme "keywords"
+	 */
+	protected function explode($delimiter, $string) {
+		if ($string === null) {
+			return null;
+		} else {
+			return explode($delimiter, $string);
+		}
+	}
+
+	/**
 	 * Ajoute un fichier et renvoie sa clef et ses attributs; si aucun fichier
 	 * n'est spécifié, modifie les métadonnées de la clef ciblée
 	 */
@@ -647,8 +659,8 @@ class CumulusService {
 		$path = '/' . implode('/', $this->resources);
 
 		// extraction des paramètres POST
-		$keywords = explode(',', $this->getParam('keywords'));
-		$groups = explode(',', $this->getParam('groups'));
+		$keywords = $this->explode(',', $this->getParam('keywords'));
+		$groups = $this->explode(',', $this->getParam('groups'));
 		$permissions = $this->getParam('permissions');
 		$license = $this->getParam('license');
 		$meta = json_decode($this->getParam('meta'), true);
@@ -676,14 +688,6 @@ class CumulusService {
 			}
 		}
 
-		/*echo "POST: [$path] [$key] [$permissions] [$license]\n";
-		echo "KW: " . print_r($keywords, true) . "\n";
-		echo "GP: " . print_r($groups, true) . "\n";
-		echo "MT: " . print_r($meta, true) . "\n";
-		echo "Content-type : " . $_SERVER["CONTENT_TYPE"] . "\n";
-		print_r($file);
-		echo "\n";*/
-
 		$info = false;
 		if ($file == null) {
 			// mise à jour métadonnées seulement
@@ -692,7 +696,7 @@ class CumulusService {
 			// ajout / mise à jour de fichier
 			$info = $this->lib->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 		}
-		echo "INFO: "; var_dump($info); echo "\n";
+		//echo "INFO: "; var_dump($info); echo "\n";
 
 		if ($info == false) {
 			$this->sendError("error while sending file");
@@ -706,7 +710,7 @@ class CumulusService {
 	 */
 	protected function delete() {
 		$key = array_pop($this->resources);
-		$path = implode('/', $this->resources);
+		$path = '/' . implode('/', $this->resources);
 
 		//echo "delete : [$path] [$key]\n";
 		$info = $this->lib->deleteByKey($path, $key);
@@ -723,7 +727,7 @@ class CumulusService {
 	 */
 	protected function options() {
 		$key = array_pop($this->resources);
-		$path = implode('/', $this->resources);
+		$path = '/' . implode('/', $this->resources);
 
 		//echo "options : [$path] [$key]\n";
 		$file = $this->lib->getAttributesByKey($path, $key);

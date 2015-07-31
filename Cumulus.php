@@ -145,7 +145,7 @@ class Cumulus implements CumulusInterface {
 	/**
 	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
-	public function updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta) {
+	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		return $this->adapter->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
 	}
 
