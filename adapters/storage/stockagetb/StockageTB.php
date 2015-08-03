@@ -133,12 +133,44 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Vérifie que l'utilisateur en cours a le droit d'effectuer l'action
-	 * qu'il demande; jette une exception si ce n'est pas le cas
+	 * Crée une clause pour contrôler les permissions en lecture de
+	 * l'utilisateur sur le jeu de données en train d'être requêté
 	 */
 	protected function getRightsCheckingClause() {
-		$clause = "";
-		
+		// caractéristiques de l'utilisateur
+		$currentUserId = $this->authAdapter->getUserId();
+		$currentUserGroups = $this->authAdapter->getUserGroups();
+
+		// possibilité d'avoir les droits :
+		$clause = [];
+
+		// - le fichier est public
+		$clause[] = "owner = '' OR owner IS NULL OR permissions = '' OR permissions IS NULL";
+
+		// - vous êtes le propriétaire
+		if ($currentUserId != '') {
+			$clause[] = "owner = '$currentUserId'";
+		}
+
+		if (! empty($currentUserGroups)) {
+			// technique de sioux des montagnes
+			$groupsPattern = implode(')|(', $currentUserGroups);
+			$groupsPattern = '(^|,)(' . $groupsPattern . ')(,|$)';
+			// double échappement des caractères spéciaux pour MySQL
+			// @TODO se protéger d'autre chose que '.', comme '[' et ']' par ex ?
+			$groupsPattern = str_replace('.', '\\.', $groupsPattern);
+		}
+		// - vous êtes dans un groupe et les groupes sont autorisés à lire (ou plus)
+		$clause[] = "(SUBSTR(permissions, 1, 1) IN ('r', 'w') AND groups REGEXP '$groupsPattern')";
+
+		// - les "autres" sont autorisés à lire (ou plus)
+		$clause[] = "SUBSTR(permissions, 2, 1) IN ('r', 'w')";
+
+		// construction de la clause de permissions
+		$clause = '(' . implode(' OR ', $clause) . ')';
+		//echo "CLAUSE: $clause"; exit;
+
+		return $clause;
 	}
 
 	/**
@@ -247,6 +279,8 @@ class StockageTB implements CumulusInterface {
 		if ($strict === false) {
 			$clause = "original_name LIKE '%" . str_replace('*', '%', $name) . "%'";
 		}
+		// vérification des droits
+		$clause .= " AND " . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clause);
 	}
@@ -265,6 +299,8 @@ class StockageTB implements CumulusInterface {
 		if ($recursive === true) {
 			$clause = "path LIKE '$path%'";
 		}
+		// vérification des droits
+		$clause .= " AND " . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clause);
 	}
@@ -298,6 +334,8 @@ class StockageTB implements CumulusInterface {
 			$operator = " OR ";
 		}
 		$clausesString = implode($operator, $clauses);
+		// vérification des droits
+		$clausesString = '(' . $clausesString . ') AND ' . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clausesString);
 	}
@@ -332,6 +370,8 @@ class StockageTB implements CumulusInterface {
 			$operator = " OR ";
 		}
 		$clausesString = implode($operator, $clauses);
+		// vérification des droits
+		$clausesString = '(' . $clausesString . ') AND ' . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clausesString);
 	}
@@ -346,6 +386,8 @@ class StockageTB implements CumulusInterface {
 		}
 		// clauses
 		$clause = "owner = '$user'";
+		// vérification des droits
+		$clause .= " AND " . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clause);
 	}
@@ -359,6 +401,8 @@ class StockageTB implements CumulusInterface {
 		}
 		// clauses
 		$clause = "mimetype = '$mimetype'";
+		// vérification des droits
+		$clause .= " AND " . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clause);
 	}
@@ -372,6 +416,8 @@ class StockageTB implements CumulusInterface {
 		}
 		// clauses
 		$clause = "license = '$license'";
+		// vérification des droits
+		$clause .= " AND " . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clause);
 	}
@@ -402,6 +448,8 @@ class StockageTB implements CumulusInterface {
 			$clauses[] = "date($dateColumn) $operator '$date1'";
 		}
 		$clausesString = implode(" AND ", $clauses);
+		// vérification des droits
+		$clausesString = '(' . $clausesString . ') AND ' . $this->getRightsCheckingClause();
 
 		return $this->queryMultipleFiles($clausesString);
 	}
@@ -513,6 +561,8 @@ class StockageTB implements CumulusInterface {
 			$operator = " OR ";
 		}
 		$clausesString = implode($operator, $clauses);
+		// vérification des droits
+		$clausesString = '(' . $clausesString . ') AND ' . $this->getRightsCheckingClause();
 	
 		return $this->queryMultipleFiles($clausesString);
 	}
