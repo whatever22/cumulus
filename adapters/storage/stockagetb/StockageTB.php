@@ -569,9 +569,9 @@ class StockageTB implements CumulusInterface {
 
 	/**
 	 * Ajoute le fichier $file au stock, dans le chemin $path, avec la clef $key,
-	 * les mots-clefs $keywords (séparés par des virgules), les groupes $groupes
+	 * les mots-clefs $keywords (séparés par des virgules), les groupes $groups
 	 * (séparés par des virgules), les permissions $permissions, la licence
-	 * $license et les métadonnées $meta (portion de JSON libre). Si le fichier
+	 * $license et les métadonnées $meta (portion de JSON libre); si le fichier
 	 * existe déjà, il sera remplacé
 	 */
 	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
@@ -646,9 +646,12 @@ class StockageTB implements CumulusInterface {
 		$diskPath = $this->quote($storageInfo['disk_path']);
 		$mimetype = $this->quote($storageInfo['mimetype']);
 
+		// gestion du propriétaire
+		$owner = $this->quote($this->authAdapter->getUserId());
+
 		// requete
 		$q = "INSERT INTO cumulus_files VALUES ($key, $key, $path"
-			. ", $diskPath, $mimetype, NULL, $groups, $permissions"
+			. ", $diskPath, $mimetype, $owner, $groups, $permissions"
 			. ", $keywords, $license, $meta, DEFAULT, DEFAULT)";
 		//echo "QUERY : $q\n";
 
@@ -666,6 +669,9 @@ class StockageTB implements CumulusInterface {
 		$key = $this->quote($key);
 		$path = $this->quote($path);
 
+		// gestion du propriétaire
+		$owner = $this->authAdapter->getUserId();
+
 		// ...et construction de la clause SET
 		$setClauses = array();
 		if ($keywords !== null) {
@@ -673,6 +679,10 @@ class StockageTB implements CumulusInterface {
 		}
 		if ($groups !== null) {
 			$setClauses[] = 'groups=' . $this->quote(implode(',', $groups));
+		}
+		if ($owner !== null) {
+			// remplacement du propriétaire par le dernier à avoir modifié le fichier
+			$setClauses[] = 'owner=' . $this->quote($owner);
 		}
 		if ($permissions !== null) {
 			$setClauses[] = 'permissions=' . $this->quote($permissions);
@@ -718,6 +728,8 @@ class StockageTB implements CumulusInterface {
 		if ($existingFile == false) {
 			throw new Exception('storage: file entry not found');
 		} else {
+			// vérification des permissions en écriture
+			$this->checkPermissionsOnFile($existingFile, self::$PERMISSION_WRITE);
 			// mise à jour
 			$updateInfo = $this->updateFileReference(null, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 		}
@@ -740,6 +752,8 @@ class StockageTB implements CumulusInterface {
 		$fileInfo = $this->getByKey($path, $key);
 		// si le fichier existe dans la base de données
 		if ($fileInfo != false) {
+			// vérification des permissions en écriture
+			$this->checkPermissionsOnFile($fileInfo, self::$PERMISSION_WRITE);
 			// suppression de l'entrée dans la base de données
 			$deletedFromDb = $this->deleteFileReference($path, $key);
 			if ($deletedFromDb == false) {
