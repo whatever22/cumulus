@@ -658,6 +658,7 @@ class CumulusService {
 		$path = '/' . implode('/', $this->resources);
 
 		// extraction des paramètres POST
+		$newkey = $this->getParam('newkey');
 		$keywords = $this->explode(',', $this->getParam('keywords'));
 		$groups = $this->explode(',', $this->getParam('groups'));
 		$permissions = $this->getParam('permissions');
