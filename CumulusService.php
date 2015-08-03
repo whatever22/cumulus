@@ -716,7 +716,7 @@ class CumulusService {
 		$info = false;
 		if ($file == null) {
 			// mise à jour métadonnées seulement
-			$info = $this->lib->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
+			$info = $this->lib->updateByKey($path, $key, $newkey, $keywords, $groups, $permissions, $license, $meta);
 		} else {
 			// ajout / mise à jour de fichier
 			$info = $this->lib->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
