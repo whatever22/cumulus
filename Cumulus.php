@@ -168,10 +168,11 @@ class Cumulus implements CumulusInterface {
 	}
 
 	/**
-	 * Met à jour les métadonnées du fichier identifié par $key / $path
+	 * Met à jour les métadonnées du fichier identifié par $key / $path; si
+	 * $newkey est fourni, renomme le fichier
 	 */
-	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
-		return $this->storageAdapter->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
+	public function updateByKey($path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		return $this->storageAdapter->updateByKey($path, $key, $newkey, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**

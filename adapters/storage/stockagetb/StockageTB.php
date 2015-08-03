@@ -661,10 +661,42 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Insère une référence de fichier dans la base de données, en fonction des
-	 * informations retournées par la couche de stockage sur disque
+	 * Met à jour les métadonnées du fichier identifié par $key / $path; si
+	 * $newkey est fourni, renomme le fichier
 	 */
-	protected function updateFileReference($storageInfo, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+	public function updateByKey($path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		// cas d'erreurs
+		if ($key == null) {
+			throw new Exception('storage: no key specified');
+		}
+		// mise à jour
+		$existingFile = $this->getByKey($path, $key);
+		// si la référence du fichier existe déjà dans la bdd
+		if ($existingFile == false) {
+			throw new Exception('storage: file entry not found');
+		} else {
+			// vérification des permissions en écriture
+			$this->checkPermissionsOnFile($existingFile, self::$PERMISSION_WRITE);
+			// mise à jour
+			$updateInfo = $this->updateFileReference(null, $path, $key, $newkey, $keywords, $groups, $permissions, $license, $meta);
+		}
+		// si l'insertion / màj s'est bien passée
+		if ($updateInfo != false) {
+			// re-lecture de toutes les infos (mode fainéant)
+			$info = $this->getAttributesByKey($path, $key);
+			return $info;
+		} else {
+			throw new Exception('storage: update failed');
+		}
+		return false;
+	}
+
+	/**
+	 * Insère une référence de fichier dans la base de données, en fonction des
+	 * informations retournées par la couche de stockage sur disque; si
+	 * $newkey est fourni, renomme le fichier
+	 */
+	protected function updateFileReference($storageInfo, $path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// protection des entrées
 		$key = $this->quote($key);
 		$path = $this->quote($path);
@@ -674,6 +706,10 @@ class StockageTB implements CumulusInterface {
 
 		// ...et construction de la clause SET
 		$setClauses = array();
+		if ($newkey !== null) {
+			// renommage du fichier
+			$setClauses[] = 'fkey=' . $this->quote($newkey);
+		}
 		if ($keywords !== null) {
 			$setClauses[] = 'keywords=' . $this->quote(implode(',', $keywords));
 		}
@@ -710,36 +746,6 @@ class StockageTB implements CumulusInterface {
 			$r = $this->db->exec($q);
 			// 1 ligne doit être affectée
 			return ($r == 1);
-		}
-		return false;
-	}
-
-	/**
-	 * Met à jour les métadonnées du fichier identifié par $key / $path
-	 */
-	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
-		// cas d'erreurs
-		if ($key == null) {
-			throw new Exception('storage: no key specified');
-		}
-		// mise à jour
-		$existingFile = $this->getByKey($path, $key);
-		// si la référence du fichier existe déjà dans la bdd
-		if ($existingFile == false) {
-			throw new Exception('storage: file entry not found');
-		} else {
-			// vérification des permissions en écriture
-			$this->checkPermissionsOnFile($existingFile, self::$PERMISSION_WRITE);
-			// mise à jour
-			$updateInfo = $this->updateFileReference(null, $path, $key, $keywords, $groups, $permissions, $license, $meta);
-		}
-		// si l'insertion / màj s'est bien passée
-		if ($updateInfo != false) {
-			// re-lecture de toutes les infos (mode fainéant)
-			$info = $this->getAttributesByKey($path, $key);
-			return $info;
-		} else {
-			throw new Exception('storage: update failed');
 		}
 		return false;
 	}
