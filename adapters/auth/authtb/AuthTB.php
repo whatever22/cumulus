@@ -12,7 +12,7 @@ class AuthTB {
 	protected $user;
 
 	/** Groupes auxquels appartient l'utilisateur */
-	protected $groups = array("projet:botanique-à-bort-les-orgues");
+	protected $groups = array();
 
 	public function __construct($config) {
 		// copie de la config
@@ -23,12 +23,44 @@ class AuthTB {
 	}
 
 	/**
+	 * Retourne les données utilisateur en cours
+	 */
+	public function getUser() {
+		return $this->user;
+	}
+
+	/**
+	 * Retourne l'identifiant de l'utilisateur (id numérique @TODO valider cette
+	 * stratégie)
+	 */
+	public function getUserId() {
+		return $this->user['id'];
+	}
+
+	/**
+	 * Retourne les groupes auwquels l'utilisateur en cours appartient
+	 */
+	public function getUserGroups() {
+		return $this->groups;
+	}
+
+	/**
+	 * Retourne true si le courriel de l'utilisateur identifié par le jeton SSO
+	 * est dans la liste des admins, située dans la configuration
+	 */
+	public function isAdmin() {
+		$admins = $this->config['adapters']['AuthTB']['admins'];
+		return in_array($this->user['sub'], $admins);
+	}
+
+	/**
 	 * Recherche un jeton SSO dans l'entête HTTP "Authorization", vérifie ce
 	 * jeton auprès de l'annuaire et en cas de succès décode les informations
 	 * de l'utilisateur et les place dans $this->user
 	 */
 	protected function getUserFromToken() {
-		$user = null;
+		// utilisateur non identifié par défaut
+		$user = $this->getUnknownUser();
 		// lecture du jeton
 		$token = $this->readTokenFromHeader();
 		//echo "Token : $token\n";
@@ -50,6 +82,16 @@ class AuthTB {
 			}
 		}
 		return $user;
+	}
+
+	/**
+	 * Définit comme utilisateur courant un pseudo-utilisateur inconnu
+	 */
+	protected function getUnknownUser() {
+		$this->user = array(
+			'sub' => null,
+			'id' => null // @TODO remplacer par un ID de session ?
+		);
 	}
 
 	/**
@@ -102,23 +144,6 @@ class AuthTB {
 		$payload = json_decode($payload, true);
 
 		return $payload;
-	}
-
-	public function getUser() {
-		return $this->user;
-	}
-
-	public function getUserId() {
-		return $this->user['id'];
-	}
-
-	public function getUserGroups() {
-		return $this->groups;
-	}
-
-	public function isAdmin() {
-		$admins = $this->config['adapters']['AuthTB']['admins'];
-		return in_array($this->user['sub'], $admins);
 	}
 }
 
