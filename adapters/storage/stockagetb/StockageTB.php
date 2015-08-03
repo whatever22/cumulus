@@ -16,6 +16,9 @@ require 'StockageDisque.php';
  */
 class StockageTB implements CumulusInterface {
 
+	public static $PERMISSION_READ = "permission_read";
+	public static $PERMISSION_WRITE = "permission_write";
+
 	/** Config passée par Cumulus.php */
 	protected $config;
 
@@ -24,6 +27,9 @@ class StockageTB implements CumulusInterface {
 
 	/** Lib stockage sur disque */
 	protected $diskStorage;
+
+	/** Lib d'authentification - gestion des utilisateurs */
+	protected $authAdapter;
 
 	/** Inverseur de critères: si true, les méthodes GET retourneront tous les
 		résultats qui NE correspondent PAS aux critères demandés */
@@ -37,12 +43,21 @@ class StockageTB implements CumulusInterface {
 		$DB = $this->config['adapters']['StockageTB']['db'];
 		$dsn = "mysql:host=" . $DB['host'] . ";dbname=" . $DB['dbname'] . ";port=" . $DB['port'];
 		$this->db = new PDO($dsn, $DB['username'], $DB['password']);
+		// UTF-8
+		$this->db->exec("SET CHARACTER SET utf8");
 
 		// lib de stockage sur disque
 		$this->diskStorage = new StockageDisque($this->config);
 
 		// pour ne pas récupérer les valeurs en double (indices numériques + texte)
 		$this->db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+	}
+
+	/**
+	 * Adapteur d'authentification / gestion des droits
+	 */
+	public function setAuthAdapter($adapter) {
+		$this->authAdapter = $adapter;
 	}
 
 	/**
@@ -118,6 +133,75 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Vérifie que l'utilisateur en cours a le droit d'effectuer l'action
+	 * qu'il demande; jette une exception si ce n'est pas le cas
+	 */
+	protected function getRightsCheckingClause() {
+		$clause = "";
+		
+	}
+
+	/**
+	 * Vérifie que l'utilisateur en cours a les droits (de lecture ou d'écriture
+	 * selon $permToCheck) sur le fichier dont les caractéristiques sont $file
+	 */
+	protected function checkPermissionsOnFile($file, $permToCheck=null) {
+		// que vérifie-t-on : lecture ou écriture ?
+		if (! in_array($permToCheck, array(self::$PERMISSION_READ, self::$PERMISSION_WRITE))) {
+			$permToCheck = self::$PERMISSION_READ; // par défaut : lecture
+		}
+
+		// caractéristiques du fichier
+		$perms = $file['permissions'];
+		$owner = $file['owner'];
+		$groups = explode(',', $file['groups']);
+
+		// caractéristiques de l'utilisateur
+		$currentUserId = $this->authAdapter->getUserId();
+		$currentUserGroups = $this->authAdapter->getUserGroups();
+
+		// possibilités d'avoir des droits
+		$isFileOwner = ($owner == $currentUserId);
+		$fileIsPublic = ($perms == null || $owner == null); // NULL or empty
+		$userIsInAllowedGroup = (! empty(array_intersect($groups, $currentUserGroups)));
+		$fileHasReadRightsForGroups = (strlen($perms) == 2 && in_array(substr($perms, 0, 1), array('r', 'w')));
+		$fileHasReadRightsForOthers = (strlen($perms) == 2 && in_array(substr($perms, 1, 1), array('r', 'w')));
+		$fileHasWriteRightsForGroups = (strlen($perms) == 2 && substr($perms, 0, 1) ==  'w');
+		$fileHasWriteRightsForOthers = (strlen($perms) == 2 && substr($perms, 1, 1) == 'w');
+
+		// qu'est-ce qui fait qu'on n'a pas les droits ?
+		$hasNoRights = (
+			// vous n'êtes pas le propriétaire ET
+			(! $isFileOwner) &&
+			// le fichier n'est pas public
+			(! $fileIsPublic)
+		);
+		// si on doit vérifier la lecture
+		if ($permToCheck == self::$PERMISSION_READ) {
+			$hasNoRights = $hasNoRights &&
+			// le fichier n'est pas lisible par les groupes (ou sinon vous
+			// n'êtes pas dans un des bons groupes) ET
+			(! $fileHasReadRightsForGroups || ! $userIsInAllowedGroup) &&
+			// le fichier n'est pas lisible par les "autres"
+			(! $fileHasReadRightsForOthers);
+		}
+		// si on doit vérifier l'écriture
+		else if ($permToCheck == self::$PERMISSION_WRITE) {
+			$hasNoRights = $hasNoRights &&
+			// le fichier n'est pas écrivable par les groupes (ou sinon vous
+			// n'êtes pas dans un des bons groupes) ET
+			(! $fileHasWriteRightsForGroups || ! $userIsInAllowedGroup) &&
+			// le fichier n'est pas écrivable par les "autres"
+			(! $fileHasWriteRightsForOthers);
+		}
+
+		if ($hasNoRights) {
+			// vous n'avez pas les droits
+			throw new Exception("storage: insufficent persmissions");
+		} // sinon tout va bien
+	}
+
+	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
 	 */
 	public function getByKey($path, $key) {
@@ -141,6 +225,8 @@ class StockageTB implements CumulusInterface {
 			$data = $r->fetchAll();
 			$this->decodeMeta($data);
 			if (! empty($data[0])) {
+				// vérification des droits
+				$this->checkPermissionsOnFile($data[0]);
 				return $data[0];
 			}
 		}

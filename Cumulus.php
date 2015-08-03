@@ -13,8 +13,8 @@ class Cumulus implements CumulusInterface {
 	protected $config = array();
 	public static $CHEMIN_CONFIG = "config/config.json";
 
-	/** Implémentation de la lib par un adapteur */
-	protected $adapter;
+	/** Implémentation de la lib de stockage par un adapteur */
+	protected $storageAdapter;
 
 	public function __construct() {
 		// config
@@ -24,17 +24,42 @@ class Cumulus implements CumulusInterface {
 			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
 		}
 
-		// adapteur
-		$adapterName = $this->config['adapter'];
-		$adapterDir = strtolower($adapterName);
-		$adapterPath = 'adapters/' . $adapterDir . '/' . $adapterName . '.php';
-		if (strpos($adapterName, "..") != false || $adapterName == '' || ! file_exists($adapterPath)) {
-			throw new Exception ("adapter " . $adapterPath . " doesn't exist");
+		// adapteur de stockage
+		$storageAdapterName = $this->config['storageAdapter'];
+		$storageAdapterDir = strtolower($storageAdapterName);
+		$storageAdapterPath = 'adapters/storage/' . $storageAdapterDir . '/' . $storageAdapterName . '.php';
+		if (strpos($storageAdapterName, "..") != false || $storageAdapterName == '' || ! file_exists($storageAdapterPath)) {
+			throw new Exception ("storage adapter " . $storageAdapterPath . " doesn't exist");
 		}
-		require $adapterPath;
+		require $storageAdapterPath;
 		// on passe la config à l'adapteur - à lui de stocker ses paramètres
 		// dans un endroit correct (adapters.nomdeladapteur par exemple)
-		$this->adapter = new $adapterName($this->config);
+		$this->storageAdapter = new $storageAdapterName($this->config);
+
+		// adapteur d'authentification / gestion des droits
+		$authAdapter = null;
+		// gestion des droits facultative
+		if (! empty($this->config['authAdapter'])) {
+			$authAdapterName = $this->config['authAdapter'];
+			$authAdapterDir = strtolower($authAdapterName);
+			$authAdapterPath = 'adapters/auth/' . $authAdapterDir . '/' . $authAdapterName . '.php';
+			if (strpos($authAdapterName, "..") != false || $authAdapterName == '' || ! file_exists($authAdapterPath)) {
+				throw new Exception ("auth adapter " . $authAdapterPath . " doesn't exist");
+			}
+			require $authAdapterPath;
+			// on passe la config à l'adapteur - à lui de stocker ses paramètres
+			// dans un endroit correct (adapters.nomdeladapteur par exemple)
+			$authAdapter = new $authAdapterName($this->config);
+		}
+		// on passe l'adapteur d'authentification à l'adapteur de stockage
+		$this->setAuthAdapter($authAdapter);
+	}
+
+	/**
+	 * Adapteur d'authentification / gestion des droits (doit être facultatif)
+	 */
+	public function setAuthAdapter($adapter) {
+		$this->storageAdapter->setAuthAdapter($adapter);
 	}
 
 	/**
@@ -42,14 +67,14 @@ class Cumulus implements CumulusInterface {
 	 * devront être inversés
 	 */
 	public function setInverseCriteria($inverse) {
-		$this->adapter->setInverseCriteria($inverse);
+		$this->storageAdapter->setInverseCriteria($inverse);
 	}
 
 	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
 	 */
 	public function getByKey($path, $key) {
-		return $this->adapter->getByKey($path, $key);
+		return $this->storageAdapter->getByKey($path, $key);
 	}
 
 	/**
@@ -57,7 +82,7 @@ class Cumulus implements CumulusInterface {
 	 * $trict est true, compare avec un "=" sinon avec un "LIKE"
 	 */
 	public function getByName($name, $strict=false) {
-		return $this->adapter->getByName($name, $strict);
+		return $this->storageAdapter->getByName($name, $strict);
 	}
 
 	/**
@@ -65,7 +90,7 @@ class Cumulus implements CumulusInterface {
 	 * $recursive est true, cherchera dans tous les sous-répertoires
 	 */
 	public function getByPath($path, $recursive=false) {
-		return $this->adapter->getByPath($path, $recursive);
+		return $this->storageAdapter->getByPath($path, $recursive);
 	}
 
 	/**
@@ -75,7 +100,7 @@ class Cumulus implements CumulusInterface {
 	 * on cherchera les fichiers n'ayant pas ce mot-clef
 	 */
 	public function getByKeywords($keywords, $mode="AND") {
-		return $this->adapter->getByKeywords($keywords, $mode);
+		return $this->storageAdapter->getByKeywords($keywords, $mode);
 	}
 
 	/**
@@ -86,7 +111,7 @@ class Cumulus implements CumulusInterface {
 	 * @TODO gérer les droits
 	 */
 	public function getByGroups($groups, $mode="AND") {
-		return $this->adapter->getByGroups($groups, $mode);
+		return $this->storageAdapter->getByGroups($groups, $mode);
 	}
 
 	/**
@@ -94,21 +119,21 @@ class Cumulus implements CumulusInterface {
 	 * @TODO gérer les droits
 	 */
 	public function getByUser($user) {
-		return $this->adapter->getByUser($user);
+		return $this->storageAdapter->getByUser($user);
 	}
 
 	/**
 	 * Retourne une liste de fichiers dont le type MIME est $mimetype
 	 */
 	public function getByMimetype($mimetype) {
-		return $this->adapter->getByMimetype($mimetype);
+		return $this->storageAdapter->getByMimetype($mimetype);
 	}
 
 	/**
 	 * Retourne une liste de fichiers dont la licence est $license
 	 */
 	public function getByLicense($license) {
-		return $this->adapter->getByLicense($license);
+		return $this->storageAdapter->getByLicense($license);
 	}
 
 	/**
@@ -118,7 +143,7 @@ class Cumulus implements CumulusInterface {
 	 * en fonction de $operator ("=", "<" ou ">")
 	 */
 	public function getByDate($dateColumn, $date1, $date2, $operator="=") {
-		return $this->adapter->getByDate($dateColumn, $date1, $date2, $operator);
+		return $this->storageAdapter->getByDate($dateColumn, $date1, $date2, $operator);
 	}
 
 	/**
@@ -128,7 +153,7 @@ class Cumulus implements CumulusInterface {
 	 * "AND"
 	 */
 	public function search($searchParams=array()) {
-		return $this->adapter->search($searchParams);
+		return $this->storageAdapter->search($searchParams);
 	}
 
 	/**
@@ -139,14 +164,14 @@ class Cumulus implements CumulusInterface {
 	 * existe déjà, il sera remplacé
 	 */
 	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
-		return $this->adapter->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+		return $this->storageAdapter->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**
 	 * Met à jour les métadonnées du fichier identifié par $key / $path
 	 */
 	public function updateByKey($path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
-		return $this->adapter->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
+		return $this->storageAdapter->updateByKey($path, $key, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**
@@ -154,7 +179,7 @@ class Cumulus implements CumulusInterface {
 	 * supprime que la référence mais conserve le fichier dans le stockage
 	 */
 	public function deleteByKey($path, $key, $keepFile=false) {
-		return $this->adapter->deleteByKey($path, $key, $keepFile);
+		return $this->storageAdapter->deleteByKey($path, $key, $keepFile);
 	}
 
 	/**
@@ -162,6 +187,6 @@ class Cumulus implements CumulusInterface {
 	 * mais pas le fichier lui-même
 	 */
 	public function getAttributesByKey($path, $key) {
-		return $this->adapter->getAttributesByKey($path, $key);
+		return $this->storageAdapter->getAttributesByKey($path, $key);
 	}
 }
