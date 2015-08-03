@@ -70,6 +70,21 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Convertit les groupes et mots-clefs d'un jeu de données (chaînes séparées
+	 * par des virgules) en tableaux
+	 */
+	protected function explodeGroupsAndKeywords(&$data) {
+		foreach ($data as &$d) {
+			if ($d['keywords'] != null) {
+				$d['keywords'] = explode(',', $d['keywords']);
+			}
+			if ($d['keywords'] != null) {
+				$d['groups'] = explode(',', $d['groups']);
+			}
+		}
+	}
+
+	/**
 	 * Renverse ou non la clause $clause en fonction de $this->inverseCriteria;
 	 * utilise un NOT (clause) pour l'inversion - attention, donnera sûrement
 	 * des résultats non désirés en cas de colonnes NULL @TODO faire mieux
@@ -96,6 +111,7 @@ class StockageTB implements CumulusInterface {
 		if ($r != false) {
 			$data = $r->fetchAll();
 			$this->decodeMeta($data);
+			$this->explodeGroupsAndKeywords($data);
 			return $data;
 		}
 		return false;
@@ -159,9 +175,9 @@ class StockageTB implements CumulusInterface {
 			// double échappement des caractères spéciaux pour MySQL
 			// @TODO se protéger d'autre chose que '.', comme '[' et ']' par ex ?
 			$groupsPattern = str_replace('.', '\\.', $groupsPattern);
+			// - vous êtes dans un groupe et les groupes sont autorisés à lire (ou plus)
+			$clause[] = "(SUBSTR(permissions, 1, 1) IN ('r', 'w') AND groups REGEXP '$groupsPattern')";
 		}
-		// - vous êtes dans un groupe et les groupes sont autorisés à lire (ou plus)
-		$clause[] = "(SUBSTR(permissions, 1, 1) IN ('r', 'w') AND groups REGEXP '$groupsPattern')";
 
 		// - les "autres" sont autorisés à lire (ou plus)
 		$clause[] = "SUBSTR(permissions, 2, 1) IN ('r', 'w')";
@@ -256,9 +272,11 @@ class StockageTB implements CumulusInterface {
 		if ($r != false) {
 			$data = $r->fetchAll();
 			$this->decodeMeta($data);
+			$this->explodeGroupsAndKeywords($data);
 			if (! empty($data[0])) {
 				// vérification des droits
 				$this->checkPermissionsOnFile($data[0]);
+				// ajout 
 				return $data[0];
 			}
 		}
