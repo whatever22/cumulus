@@ -75,7 +75,7 @@ class StockageTB implements CumulusInterface {
 			if ($d['keywords'] != null) {
 				$d['keywords'] = explode(',', $d['keywords']);
 			}
-			if ($d['keywords'] != null) {
+			if ($d['groups'] != null) {
 				$d['groups'] = explode(',', $d['groups']);
 			}
 		}
@@ -199,10 +199,6 @@ class StockageTB implements CumulusInterface {
 		$perms = $file['permissions'];
 		$owner = $file['owner'];
 		$groups = $file['groups'];
-		// @TODO unifier Array ou chaîne séparée par virgules
-		if (! is_array($groups)) {
-			$groups = explode(',', $groups);
-		}
 
 		// caractéristiques de l'utilisateur
 		$currentUserId = $this->authAdapter->getUserId();
