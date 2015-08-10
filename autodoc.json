@@ -9,8 +9,7 @@
 			"GET __ROOTURI__by-name/compte rendu",
 			"GET __ROOTURI__by-name/compte rendu?LIKE (par défaut)",
 			"GET __ROOTURI__by-name/compte rendu?STRICT",
-			"Renvoie une liste de fichiers (les clefs et les attributs) correspondant au nom ou à la / aux portion(s) de nom fournie(s), quels que soient leurs emplacements",
-			""
+			"Renvoie une liste de fichiers (les clefs et les attributs) correspondant au nom ou à la / aux portion(s) de nom fournie(s), quels que soient leurs emplacements"
 		],
 		[
 			"GET __ROOTURI__by-path/mon/super/chemin",
@@ -105,6 +104,7 @@
 		"original_name": "nom du fichier",
 		"path": "chemin du fichier (dossier parent)",
 		"mimetype": "type MIME du fichier",
+		"size": "taille du fichier en octets",
 		"owner": "propriétaire du fichier",
 		"groups": "groupes (Array)",
 		"permissions": "permissions du fichier",
@@ -113,8 +113,7 @@
 		"meta": "portion de JSON libre",
 		"creation_date": "date de création",
 		"last_modification_date": "date de dernière modification",
-		"href": "lien de téléchargement du fichier",
-		"size": "taille du fichier en octets"
+		"href": "lien de téléchargement du fichier"
 	},
 	"permissions": [
 		"Les permissions sont gérées par les trois champs owner, permissions, groups",
@@ -124,7 +123,8 @@
 		{
 			"r-": "lecture pour les membres d'un des groupes, aucun droit pour les autres",
 			"wr": "lecture et écriture pour les membres d'un des groupes, lecture pour les autres",
-			"ww": "lecture et écriture pour tous (équivalent à NULL ou vide)"
+			"ww": "lecture et écriture pour tous (équivalent à NULL ou vide)",
+			"--": "seul le propriétaire a les droits"
 		}
 	]
 }

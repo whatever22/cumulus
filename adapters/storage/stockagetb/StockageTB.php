@@ -61,20 +61,17 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Parcourt un jeu de données et décode le JSON de chaque colonne "meta"
+	 * Parcourt un jeu de données et décode le JSON de chaque colonne "meta";
+	 * convertit les groupes et mots-clefs d'un jeu de données (chaînes séparées
+	 * par des virgules) en tableaux; convertit "size" en int (MySQL retourne
+	 * une String)
 	 */
-	protected function decodeMeta(&$data) {
+	protected function formatData(&$data) {
 		foreach ($data as &$d) {
 			$d['meta'] = json_decode($d['meta'], true);
-		}
-	}
-
-	/**
-	 * Convertit les groupes et mots-clefs d'un jeu de données (chaînes séparées
-	 * par des virgules) en tableaux
-	 */
-	protected function explodeGroupsAndKeywords(&$data) {
-		foreach ($data as &$d) {
+			if ($d['size'] !== null) {
+				$d['size'] = intval($d['size']);
+			}
 			if ($d['keywords'] != null) {
 				$d['keywords'] = explode(',', $d['keywords']);
 			}
@@ -110,8 +107,7 @@ class StockageTB implements CumulusInterface {
 		$r = $this->db->query($q);
 		if ($r != false) {
 			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			$this->explodeGroupsAndKeywords($data);
+			$this->formatData($data);
 			return $data;
 		}
 		return false;
@@ -202,7 +198,11 @@ class StockageTB implements CumulusInterface {
 		// caractéristiques du fichier
 		$perms = $file['permissions'];
 		$owner = $file['owner'];
-		$groups = explode(',', $file['groups']);
+		$groups = $file['groups'];
+		// @TODO unifier Array ou chaîne séparée par virgules
+		if (! is_array($groups)) {
+			$groups = explode(',', $groups);
+		}
 
 		// caractéristiques de l'utilisateur
 		$currentUserId = $this->authAdapter->getUserId();
@@ -271,8 +271,7 @@ class StockageTB implements CumulusInterface {
 		$r = $this->db->query($q);
 		if ($r != false) {
 			$data = $r->fetchAll();
-			$this->decodeMeta($data);
-			$this->explodeGroupsAndKeywords($data);
+			$this->formatData($data);
 			if (! empty($data[0])) {
 				// vérification des droits
 				$this->checkPermissionsOnFile($data[0]);
@@ -612,7 +611,8 @@ class StockageTB implements CumulusInterface {
 		} else if (isset($file['url'])) { // référence
 			$storageInfo = array(
 				'disk_path' => $file['url'],
-				'mimetype' => null
+				'mimetype' => null,
+				'file_size' => null
 			);
 		} else {
 			throw new Exception('invalid storageInfo');
@@ -620,13 +620,13 @@ class StockageTB implements CumulusInterface {
 		// si ça s'est bien passé, insertion dans la BD
 		if ($storageInfo != false) {
 			$existingFile = $this->getByKey($path, $key);
-			// si la référence du fichier existe déjà dans la bdd
+			// si la référence du fichier n'existe pas déjà dans la bdd
 			if ($existingFile == false) {
 				// insertion
 				$insertInfo = $this->insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
 			} else {
 				// mise à jour
-				$insertInfo = $this->updateFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+				$insertInfo = $this->updateFileReference($storageInfo, $path, $key, null, $keywords, $groups, $permissions, $license, $meta);
 				// si on avait un fichier avant et qu'on le remplace par une
 				// référence, on détruit le fichier pour libérer de l'espace
 				if (isset($file['url'])) { // référence
@@ -663,13 +663,14 @@ class StockageTB implements CumulusInterface {
 		$meta = $this->quote($meta == null ? null : json_encode($meta));
 		$diskPath = $this->quote($storageInfo['disk_path']);
 		$mimetype = $this->quote($storageInfo['mimetype']);
+		$fileSize = $this->quote($storageInfo['file_size']);
 
 		// gestion du propriétaire
 		$owner = $this->quote($this->authAdapter->getUserId());
 
 		// requete
 		$q = "INSERT INTO cumulus_files VALUES ($key, $key, $path"
-			. ", $diskPath, $mimetype, $owner, $groups, $permissions"
+			. ", $diskPath, $mimetype, $fileSize, $owner, $groups, $permissions"
 			. ", $keywords, $license, $meta, DEFAULT, DEFAULT)";
 		//echo "QUERY : $q\n";
 
@@ -750,6 +751,7 @@ class StockageTB implements CumulusInterface {
 		if (! empty($storageInfo)) {
 			$setClauses[] = 'storage_path=' . $this->quote($storageInfo['disk_path']);
 			$setClauses[] = 'mimetype=' . $this->quote($storageInfo['mimetype']);
+			$setClauses[] = 'size=' . $this->quote($storageInfo['file_size']);
 		}
 		$setClauses[] = 'last_modification_date=NOW()';
 

@@ -63,9 +63,13 @@ class StockageDisque {
 		$mimetype = finfo_file($finfo, $destination_finale);
 		finfo_close($finfo);
 
+		// détection de la taille du fichier
+		$size = filesize($destination_finale);
+
 		return array(
 			'disk_path' => $destination_finale,
-			'mimetype' => $mimetype
+			'mimetype' => $mimetype,
+			'file_size' => $size
 		);
 	}
 
