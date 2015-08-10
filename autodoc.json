@@ -62,7 +62,69 @@
 			"Supprime le fichier clef contenu dans le répertoire /chemin/arbitraire"
 		],
 		[
-			
+			"Avec un envoi de formulaire avec fichier - Content-type: multipart/form-data",
+			"POST __ROOTURI__chemin/arbitraire/clef",
+			{
+				"file": "le fichier (input type=\"file\")",
+				"keywords": "les mots-clefs à associer (Array)",
+				"groups": "les groupes auxquels associer le fichier (Array)",
+				"permissions": "les permissions",
+				"license": "la licence du fichier",
+				"meta": "portion de JSON libre"
+			},
+			"Ajoute au stockage le fichier uploadé; lui donne la clef clef; lui donne comme répertoire parent /chemin/arbitraire; les autres paramètres sont explicites.",
+			"Seront détectés : mimetype, size, original_name, user (si un jeton d'authentification est présent).",
+			"Si file est une URL, le fichier sera un pointeur sur cette URL.",
+			"creation_date et last_modification_date seront définis à la date courante. Renvoie les attributs."
+		],
+		[
+			"Avec le contenu du fichier dans le paramètre \"file\" - Content-type: application/json",
+			"POST __ROOTURI__chemin/arbitraire/clef",
+			{
+				"file": "le contenu du fichier envoyé, encodé en  Base64",
+				"keywords": "les mots-clefs à associer (Array)",
+				"groups": "les groupes auxquels associer le fichier (Array)",
+				"permissions": "les permissions",
+				"license": "la licence du fichier",
+				"meta": "portion de JSON libre"
+			},
+			"Ajoute au stockage le fichier présent dans file; lui donne la clef clef; lui donne comme répertoire parent /chemin/arbitraire; les autres paramètres sont explicites.",
+			"Seront détectés : mimetype, size, original_name, user (si un jeton d'authentification est présent).",
+			"Si file est une URL, le fichier sera un pointeur sur cette URL.",
+			"creation_date et last_modification_date seront définis à la date courante. Renvoie les attributs."
+		],
+		[
+			"Avec un envoi en flux - contenu du fichier dans le body de la requête - Content-type : application/octet-stream ou application/x-www-form-urlencoded",
+			"POST __ROOTURI__chemin/arbitraire/clef",
+			"Ajoute au stockage le fichier contenu dans le corps de la requête; lui donne la clef clef; lui donne comme répertoire parent /chemin/arbitraire. Renvoie les attributs."
 		]
+	],
+	"output format": 
+	{
+		"fkey": "clef",
+		"original_name": "nom du fichier",
+		"path": "chemin du fichier (dossier parent)",
+		"mimetype": "type MIME du fichier",
+		"owner": "propriétaire du fichier",
+		"groups": "groupes (Array)",
+		"permissions": "permissions du fichier",
+		"keywords": "mots-clefs associés (Array)",
+		"license": "licence du fichier",
+		"meta": "portion de JSON libre",
+		"creation_date": "date de création",
+		"last_modification_date": "date de dernière modification",
+		"href": "lien de téléchargement du fichier",
+		"size": "taille du fichier en octets"
+	},
+	"permissions": [
+		"Les permissions sont gérées par les trois champs owner, permissions, groups",
+		"Si owner est NULL ou vide, ou si permissions est NULL ou vide, le fichier est public (lecture et écriture pour tous).",
+		"Si l'utilisateur est propriétaire du fichier, il a tous les droits.",
+		"Sinon, les permissions sont inspirées d'UNIX et tiennent sur deux caractères. Le premier concerne les groupes, et le second les 'autres'. Le caractère peut être 'r' (lecture), 'w' (lecture et écriture - inclut la suppression), ou '-' (aucun droit).",
+		{
+			"r-": "lecture pour les membres d'un des groupes, aucun droit pour les autres",
+			"wr": "lecture et écriture pour les membres d'un des groupes, lecture pour les autres",
+			"ww": "lecture et écriture pour tous (équivalent à NULL ou vide)"
+		}
 	]
 }

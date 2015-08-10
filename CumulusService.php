@@ -311,7 +311,9 @@ class CumulusService {
 		if (file_exists(self::$AUTODOC_PATH)) {
 			$infos = json_decode(file_get_contents(self::$AUTODOC_PATH), true);
 			foreach ($infos['uri-patterns'] as &$up) {
-				$up[0] = str_replace("__ROOTURI__", $rootUri, $up[0]);
+				foreach($up as $k => &$v) {
+					$up[$k] = str_replace("__ROOTURI__", $rootUri, $up[$k]);
+				}
 			}
 		}
 		$this->sendJson($infos);
