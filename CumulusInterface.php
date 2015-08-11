@@ -28,6 +28,12 @@ interface CumulusInterface {
 	public function computeKey($path, $fileName);
 
 	/**
+	 * Retourne true si $string est une clef
+	 * @WARNING difficile à rendre déterministe !
+	 */
+	public function isKey($string);
+
+	/**
 	 * Retourne un fichier à partir de sa clef
 	 */
 	public function getByKey($key);

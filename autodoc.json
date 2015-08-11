@@ -2,8 +2,9 @@
 	"service": "cumulus",
 	"uri-patterns": [
 		[
-			"GET __ROOTURI__chemin/arbitraire/clef",
-			"Récupère le fichier clef contenu dans le répertoire /chemin/arbitraire (déclenche son téléchargement)"
+			"GET __ROOTURI__clef",
+			"GET __ROOTURI__chemin/arbitraire/nom",
+			"Récupère le fichier identifié par clef, ou nommé nom et contenu dans le répertoire /chemin/arbitraire (déclenche son téléchargement)"
 		],
 		[
 			"GET __ROOTURI__by-name/compte rendu",

@@ -60,7 +60,12 @@ class CumulusService extends BaseService {
 	 */
 	protected function buildLinksAndRemoveStoragePaths(&$results) {
 		foreach ($results as &$r) {
-			$r['href'] = $this->buildLink($r['fkey']);
+			// fichier stocké ou référence vers une URL ?
+			if (preg_match(self::$REF_PATTERN, $r['storage_path']) != false) {
+				$r['href'] = $r['storage_path'];
+			} else {
+				$r['href'] = $this->buildLink($r['fkey']);
+			}
 			unset($r['storage_path']);
 		}
 	}
@@ -73,7 +78,7 @@ class CumulusService extends BaseService {
 		if (empty($key)) {
 			return false;
 		}
-		$href = $this->domainRoot . $this->baseURI . $key;
+		$href = $this->domainRoot . $this->baseURI . '/' . $key;
 		return $href;
 	}
 
@@ -84,7 +89,7 @@ class CumulusService extends BaseService {
 	 * => http://www.media-division.com/the-right-way-to-handle-file-downloads-in-php/
 	 * @TODO demander la lecture du fichier à la couche du dessous
 	 */
-	protected function sendFile($file, $mimetype='application/octet-stream') {
+	protected function sendFile($file, $name, $size, $mimetype='application/octet-stream') {
 		// fichier stocké ou référence vers une URL ?
 		if (preg_match(self::$REF_PATTERN, $file) != false) {
 			// URL => redirection
@@ -95,11 +100,11 @@ class CumulusService extends BaseService {
 				$this->sendError("file does not exist in storage");
 			}
 			header('Content-Type: ' . $mimetype);
-			header('Content-Disposition: attachment');
+			header('Content-Disposition: attachment; filename="' . $name . '"');
 			header('Expires: 0');
 			header('Cache-Control: must-revalidate');
 			header('Pragma: public');
-			header('Content-Length: ' . filesize($file));
+			header('Content-Length: ' . $size);
 			// envoi progressif du contenu
 			// http://www.media-division.com/the-right-way-to-handle-file-downloads-in-php/
 			set_time_limit(0);
@@ -164,7 +169,7 @@ class CumulusService extends BaseService {
 				$this->search();
 				break;
 			default:
-				$this->getByKey();
+				$this->getByKeyOrCompletePath();
 		}
 	}
 
@@ -190,42 +195,29 @@ class CumulusService extends BaseService {
 
 	/**
 	 * GET http://tb.org/cumulus.php/clef
-	 * 
-	 * Récupère le fichier identifié par clef (déclenche son téléchargement)
-	 */
-	protected function getByKey() {
-		$key = array_pop($this->resources);
-
-		//echo "getByKey : [$key]\n";
-		$file = $this->lib->getByKey($key);
-
-		if ($file == false) {
-			$this->sendError("file not found", 404);
-		} else {
-			$this->sendFile($file['storage_path'], $file['mimetype']);
-		}
-	}
-
-	/**
 	 * GET http://tb.org/cumulus.php/chemin/arbitraire/nom.ext
 	 * 
-	 * Récupère le fichier nom.ext contenu dans le répertoire /chemin/arbitraire
+	 * Récupère le fichier identifié par clef ou par le couple chemin / nom
 	 * (déclenche son téléchargement)
 	 */
-	protected function getByCompletePath() {
-
-		$fileName = array_pop($this->resources);
+	protected function getByKeyOrCompletePath() {
+		$nameOrKey = array_pop($this->resources);
 		$path = '/' . implode('/', $this->resources);
 
-		//echo "getByCompletePath : [$path] [$fileName]\n";
-		// calcul de la clef
-		$key = $this->lib->computeKey($path, $fileName);
+		// A-t-on passé une clef (mise à jour) ou un couple chemin / nom
+		$key = $nameOrKey;
+		if (! $this->lib->isKey($nameOrKey)) {
+			// calcul de la clef
+			$key = $this->lib->computeKey($path, $nameOrKey);
+		}
+
+		//echo "getByKey : [$path] [$key]\n";
 		$file = $this->lib->getByKey($key);
 
 		if ($file == false) {
 			$this->sendError("file not found", 404);
 		} else {
-			$this->sendFile($file['storage_path'], $file['mimetype']);
+			$this->sendFile($file['storage_path'], $file['name'], $file['size'], $file['mimetype']);
 		}
 	}
 
@@ -534,8 +526,16 @@ class CumulusService extends BaseService {
 	 * n'est spécifié, modifie les métadonnées de la clef ciblée
 	 */
 	protected function post() {
-		$name = array_pop($this->resources);
+		$nameOrKey = array_pop($this->resources);
 		$path = '/' . implode('/', $this->resources);
+
+		// A-t-on passé une clef (mise à jour) ou un couple chemin / nom
+		// (nouveau fichier) ?
+		$key = $nameOrKey;
+		if (! $this->lib->isKey($nameOrKey)) {
+			// calcul de la clef
+			$key = $this->lib->computeKey($path, $nameOrKey);
+		}
 
 		// extraction des paramètres POST
 		$newname = $this->getParam('newname');
@@ -600,7 +600,7 @@ class CumulusService extends BaseService {
 			$info = $this->lib->updateByKey($key, $newname, $newpath, $keywords, $groups, $permissions, $license, $meta);
 		} else {
 			// ajout / mise à jour de fichier
-			$info = $this->lib->addOrUpdateFile($file, $path, $name, $keywords, $groups, $permissions, $license, $meta);
+			$info = $this->lib->addOrUpdateFile($file, $path, $nameOrKey, $keywords, $groups, $permissions, $license, $meta);
 		}
 
 		if ($info == false) {
@@ -615,10 +615,9 @@ class CumulusService extends BaseService {
 	 */
 	protected function delete() {
 		$key = array_pop($this->resources);
-		$path = '/' . implode('/', $this->resources);
 
-		//echo "delete : [$path] [$key]\n";
-		$info = $this->lib->deleteByKey($path, $key);
+		//echo "delete : [$key]\n";
+		$info = $this->lib->deleteByKey($key);
 
 		if ($info == false) {
 			$this->sendError("file not found in storage");
@@ -632,11 +631,10 @@ class CumulusService extends BaseService {
 	 */
 	protected function options() {
 		$key = array_pop($this->resources);
-		$path = '/' . implode('/', $this->resources);
 
-		//echo "options : [$path] [$key]\n";
-		$file = $this->lib->getAttributesByKey($path, $key);
-		$file['href'] = $this->buildLink($file['fkey'], $file['path']);
+		//echo "options : [$key]\n";
+		$file = $this->lib->getAttributesByKey($key);
+		$file['href'] = $this->buildLink($file['fkey']);
 
 		if ($file == false) {
 			$this->sendError("file not found", 404);

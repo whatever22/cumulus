@@ -16,6 +16,9 @@ require 'StockageDisque.php';
  */
 class StockageTB implements CumulusInterface {
 
+	/** Motif d'expression régulière pour détecter les références de fichiers */
+	public static $REF_PATTERN = '`https?://`';
+
 	public static $PERMISSION_READ = "permission_read";
 	public static $PERMISSION_WRITE = "permission_write";
 
@@ -102,7 +105,7 @@ class StockageTB implements CumulusInterface {
 	 */
 	protected function queryMultipleFiles($clause) {
 		$clause = $this->reverseOrNotClause($clause);
-		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, original_name, last_modification_date DESC";
+		$q = "SELECT * FROM cumulus_files WHERE $clause ORDER BY path, name, last_modification_date DESC";
 		//echo "QUERY : $q\n";
 		$r = $this->db->query($q);
 		if ($r != false) {
@@ -199,6 +202,9 @@ class StockageTB implements CumulusInterface {
 		$perms = $file['permissions'];
 		$owner = $file['owner'];
 		$groups = $file['groups'];
+		if ($groups == null) {
+			$groups = array(); // pour ne pas perturber array_intersect()
+		}
 
 		// caractéristiques de l'utilisateur
 		$currentUserId = $this->authAdapter->getUserId();
@@ -243,6 +249,45 @@ class StockageTB implements CumulusInterface {
 			// vous n'avez pas les droits
 			throw new Exception("storage: insufficent persmissions");
 		} // sinon tout va bien
+	}
+
+	/**
+	 * Effectue une requête HEAD à l'aide de Curl pour obtenir le type MIME et
+	 * la taille d'un fichier distant (URL)
+	 */
+	protected function detectRemoteFileMetadata($url) {
+		// HTTP HEAD
+		$ch = curl_init();
+		curl_setopt($ch, CURLOPT_URL, $url);
+		curl_setopt($ch, CURLOPT_HEADER, 1);
+		curl_setopt($ch, CURLOPT_NOBODY, 1);
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+		$mimetype = null;
+		$size = null;
+
+		$results = explode("\n", trim(curl_exec($ch)));
+		foreach($results as $line) {
+			if (strtok($line, ':') == 'Content-Type') {
+				$parts = explode(":", $line);
+				$mimetype = trim($parts[1]);
+				$parts = explode(';', $mimetype);
+				$mimetype = trim($parts[0]);
+			}
+			if (strtok($line, ':') == 'Content-Length') {
+				$parts = explode(":", $line);
+				$size = intval(trim($parts[1]));
+			}
+		}
+		curl_close($ch);
+
+		$storageInfo = array(
+			'disk_path' => $url,
+			'mimetype' => $mimetype,
+			'file_size' => $size
+		);
+
+		return $storageInfo;
 	}
 
 	/**
@@ -596,11 +641,8 @@ class StockageTB implements CumulusInterface {
 		if (isset($file['tmp_name'])) { // fichier
 			$storageInfo = $this->diskStorage->stockerFichier($file, $path, $name);
 		} else if (isset($file['url'])) { // référence
-			$storageInfo = array(
-				'disk_path' => $file['url'],
-				'mimetype' => null,
-				'file_size' => null
-			);
+			// détection des caractéristiques
+			$storageInfo = $this->detectRemoteFileMetadata($file['url']);
 		} else {
 			throw new Exception('invalid storageInfo');
 		}
@@ -621,13 +663,16 @@ class StockageTB implements CumulusInterface {
 				// si on avait un fichier avant et qu'on le remplace par une
 				// référence, on détruit le fichier pour libérer de l'espace
 				if (isset($file['url'])) { // référence
-					$this->diskStorage->supprimerFichier($existingFile['storage_path']);
+					// il y avait un vrai fichier avant
+					if (preg_match(self::$REF_PATTERN, $existingFile['storage_path']) == false) {
+						$this->diskStorage->supprimerFichier($existingFile['storage_path']);
+					}
 				}
 			}
 			// si l'insertion / màj s'est bien passée
 			if ($insertInfo != false) {
 				// re-lecture de toutes les infos (mode fainéant)
-				$info = $this->getAttributesByKey($path, $key);
+				$info = $this->getAttributesByKey($key);
 				return $info;
 			} else {
 				// sinon on détruit le fichier, si ce n'est pas une référence
@@ -681,7 +726,7 @@ class StockageTB implements CumulusInterface {
 			throw new Exception('storage: no key specified');
 		}
 		// mise à jour
-		$existingFile = $this->getByKey($path, $key);
+		$existingFile = $this->getByKey($key);
 		// si la référence du fichier existe déjà dans la bdd
 		if ($existingFile == false) {
 			throw new Exception('storage: file entry not found');
@@ -718,7 +763,10 @@ class StockageTB implements CumulusInterface {
 		// si l'insertion / màj s'est bien passée
 		if ($updateInfo != false) {
 			// re-lecture de toutes les infos (mode fainéant)
-			$info = $this->getAttributesByKey($newkey);
+			if ($newkey != null) {
+				$key = $newkey;
+			}
+			$info = $this->getAttributesByKey($key);
 			return $info;
 		} else {
 			throw new Exception('storage: update failed');
@@ -734,7 +782,6 @@ class StockageTB implements CumulusInterface {
 	protected function updateFileReference($storageInfo, $key, $newkey=null, $newname=null, $newpath=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// protection des entrées
 		$key = $this->quote($key);
-		$path = $this->quote($path);
 
 		// gestion du propriétaire
 		$owner = $this->authAdapter->getUserId();
@@ -804,6 +851,15 @@ class StockageTB implements CumulusInterface {
 	 */
 	public function computeKey($path, $fileName) {
 		return sha1($path . $fileName);
+	}
+
+	/**
+	 * Retourne true si $string est une clef
+	 * @WARNING non déterministe
+	 * http://stackoverflow.com/questions/2982059/testing-if-string-is-sha1-in-php
+	 */
+	public function isKey($string) {
+		return (bool) preg_match('/^[0-9a-f]{40}$/i', $string);
 	}
 
 	/**
