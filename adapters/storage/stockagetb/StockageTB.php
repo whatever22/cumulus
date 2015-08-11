@@ -248,22 +248,13 @@ class StockageTB implements CumulusInterface {
 	/**
 	 * Retourne un fichier à partir de sa clef et son chemin
 	 */
-	public function getByKey($path, $key) {
+	public function getByKey($key) {
 		if (empty($key)) {
 			throw new Exception('storage: no file key specified');
 		}
 
-		// clauses
-		$clauses = array();
-		$clauses[] = "fkey = '$key'";
-		if (! empty($path)) {
-			$clauses[] = "path = '$path'";
-		}
-		$clausesString = implode(" AND ", $clauses);
-
 		//requête
-		$clausesString = $this->reverseOrNotClause($clausesString);
-		$q = "SELECT * FROM cumulus_files WHERE $clausesString LIMIT 1";
+		$q = "SELECT * FROM cumulus_files WHERE fkey = '$key' LIMIT 1";
 		$r = $this->db->query($q);
 		if ($r != false) {
 			$data = $r->fetchAll();
@@ -288,9 +279,9 @@ class StockageTB implements CumulusInterface {
 		}
 
 		// clauses
-		$clause = "original_name = '$name'";
+		$clause = "name = '$name'";
 		if ($strict === false) {
-			$clause = "original_name LIKE '%" . str_replace('*', '%', $name) . "%'";
+			$clause = "name LIKE '%" . str_replace('*', '%', $name) . "%'";
 		}
 		// vérification des droits
 		$clause .= " AND " . $this->getRightsCheckingClause();
@@ -494,10 +485,10 @@ class StockageTB implements CumulusInterface {
 					$clauses[] = $subclause;
 					break;
 				case "name":
-					$subclause = "(original_name LIKE '%" . str_replace('*', '%', $val) . "%')";
+					$subclause = "(name LIKE '%" . str_replace('*', '%', $val) . "%')";
 					// @TODO vérifier booléen ou chaîne
 					if (isset($searchParams['name_strict']) && ($searchParams['name_strict'] === 'true')) {
-						$subclause = "(original_name = '$val')";
+						$subclause = "(name = '$val')";
 					}
 					$clauses[] = $subclause;
 					break;
@@ -587,7 +578,7 @@ class StockageTB implements CumulusInterface {
 	 * $license et les métadonnées $meta (portion de JSON libre); si le fichier
 	 * existe déjà, il sera remplacé
 	 */
-	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+	public function addOrUpdateFile($file, $path, $name, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// cas d'erreurs
 		if (empty($file)) {
 			throw new Exception('storage: no file specified');
@@ -596,14 +587,14 @@ class StockageTB implements CumulusInterface {
 				throw new Exception('storage: file is empty');
 			}
 		}
-		if ($key == null) {
-			throw new Exception('storage: no key specified');
+		if ($path == null || $name == null) {
+			throw new Exception('storage: no path or no name specified');
 		}
 		// écriture du fichier temporaire dans le fichier de destination, si ce
 		// n'est pas une référence sur URL
 		$storageInfo = false;
 		if (isset($file['tmp_name'])) { // fichier
-			$storageInfo = $this->diskStorage->stockerFichier($file, $path, $key);
+			$storageInfo = $this->diskStorage->stockerFichier($file, $path, $name);
 		} else if (isset($file['url'])) { // référence
 			$storageInfo = array(
 				'disk_path' => $file['url'],
@@ -613,16 +604,20 @@ class StockageTB implements CumulusInterface {
 		} else {
 			throw new Exception('invalid storageInfo');
 		}
+
+		// calcul de la clef
+		$key = $this->computeKey($path, $name);
+
 		// si ça s'est bien passé, insertion dans la BD
 		if ($storageInfo != false) {
-			$existingFile = $this->getByKey($path, $key);
+			$existingFile = $this->getByKey($key);
 			// si la référence du fichier n'existe pas déjà dans la bdd
 			if ($existingFile == false) {
 				// insertion
-				$insertInfo = $this->insertFileReference($storageInfo, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+				$insertInfo = $this->insertFileReference($storageInfo, $path, $name, $key, $keywords, $groups, $permissions, $license, $meta);
 			} else {
 				// mise à jour
-				$insertInfo = $this->updateFileReference($storageInfo, $path, $key, null, $keywords, $groups, $permissions, $license, $meta);
+				$insertInfo = $this->updateFileReference($storageInfo, $key, null, null, null, $keywords, $groups, $permissions, $license, $meta);
 				// si on avait un fichier avant et qu'on le remplace par une
 				// référence, on détruit le fichier pour libérer de l'espace
 				if (isset($file['url'])) { // référence
@@ -648,10 +643,11 @@ class StockageTB implements CumulusInterface {
 	 * Insère une référence de fichier dans la base de données, en fonction des
 	 * informations retournées par la couche de stockage sur disque
 	 */
-	protected function insertFileReference($storageInfo, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+	protected function insertFileReference($storageInfo, $path, $name, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// protection des entrées
 		$key = $this->quote($key);
 		$path = $this->quote($path);
+		$name = $this->quote($name);
 		$keywords = $this->quote($this->implode(',', $keywords));
 		$groups = $this->quote($this->implode(',', $groups));
 		$permissions = $this->quote($permissions);
@@ -665,7 +661,7 @@ class StockageTB implements CumulusInterface {
 		$owner = $this->quote($this->authAdapter->getUserId());
 
 		// requete
-		$q = "INSERT INTO cumulus_files VALUES ($key, $key, $path"
+		$q = "INSERT INTO cumulus_files VALUES ($key, $name, $path"
 			. ", $diskPath, $mimetype, $fileSize, $owner, $groups, $permissions"
 			. ", $keywords, $license, $meta, DEFAULT, DEFAULT)";
 		//echo "QUERY : $q\n";
@@ -676,10 +672,10 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
-	 * Met à jour les métadonnées du fichier identifié par $key / $path; si
-	 * $newkey est fourni, renomme le fichier
+	 * Met à jour les métadonnées du fichier identifié par $key; si
+	 * $newname est fourni, renomme le fichier et recalcule la clef
 	 */
-	public function updateByKey($path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+	public function updateByKey($key, $newname=null, $newpath=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// cas d'erreurs
 		if ($key == null) {
 			throw new Exception('storage: no key specified');
@@ -692,13 +688,37 @@ class StockageTB implements CumulusInterface {
 		} else {
 			// vérification des permissions en écriture
 			$this->checkPermissionsOnFile($existingFile, self::$PERMISSION_WRITE);
-			// mise à jour
-			$updateInfo = $this->updateFileReference(null, $path, $key, $newkey, $keywords, $groups, $permissions, $license, $meta);
+			// calcul de la nouvelle clef et renommage du fichier si besoin
+			$newkey = null;
+			$hasToMoveFile = false;
+			// la clef change si au moins le chemin ou le nom a changé
+			if (($newname != null) || ($newpath != null)) {
+				$hasToMoveFile = true;
+				$nameToHash = $existingFile['name'];
+				$pathToHash = $existingFile['path'];
+				// l'un des deux au moins a changé
+				if ($newname != null) {
+					$nameToHash = $newname;
+				}
+				if ($newpath != null) {
+					$pathToHash = $newpath;
+				}
+				// nouvelle clef = hash du chemin et du nom
+				$newkey = $this->computeKey($pathToHash, $nameToHash);
+			}
+			// si le nom ou le chemin a changé, déplacement du fichier
+			$storageInfo = false;
+			if ($hasToMoveFile) {
+				$storageInfo = $this->diskStorage->renommerFichier($existingFile['path'], $existingFile['name'], $pathToHash, $nameToHash);
+			}
+			// mise à jour dans la BD, éventuellement avec le nouveau chemin sur
+			// le disque, obtenu lors du déplacement
+			$updateInfo = $this->updateFileReference($storageInfo, $key, $newkey, $newname, $newpath, $keywords, $groups, $permissions, $license, $meta);
 		}
 		// si l'insertion / màj s'est bien passée
 		if ($updateInfo != false) {
 			// re-lecture de toutes les infos (mode fainéant)
-			$info = $this->getAttributesByKey($path, $key);
+			$info = $this->getAttributesByKey($newkey);
 			return $info;
 		} else {
 			throw new Exception('storage: update failed');
@@ -709,9 +729,9 @@ class StockageTB implements CumulusInterface {
 	/**
 	 * Insère une référence de fichier dans la base de données, en fonction des
 	 * informations retournées par la couche de stockage sur disque; si
-	 * $newkey est fourni, renomme le fichier
+	 * $newname est fourni, renomme le fichier
 	 */
-	protected function updateFileReference($storageInfo, $path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+	protected function updateFileReference($storageInfo, $key, $newkey=null, $newname=null, $newpath=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
 		// protection des entrées
 		$key = $this->quote($key);
 		$path = $this->quote($path);
@@ -723,7 +743,13 @@ class StockageTB implements CumulusInterface {
 		$setClauses = array();
 		if ($newkey !== null) {
 			// renommage du fichier
-			$setClauses[] = 'fkey=' . $this->quote($newkey);
+			if ($newname != null) {
+				$setClauses[] = 'name=' . $this->quote($newname);
+			}
+			if ($newpath != null) {
+				$setClauses[] = 'path=' . $this->quote($newpath);
+			}
+			$setClauses[] = "fkey='$newkey'";
 		}
 		if ($keywords !== null) {
 			$setClauses[] = 'keywords=' . $this->quote(implode(',', $keywords));
@@ -745,9 +771,15 @@ class StockageTB implements CumulusInterface {
 			$setClauses[] = 'meta=' . $this->quote($meta == null ? null : json_encode($meta));
 		}
 		if (! empty($storageInfo)) {
-			$setClauses[] = 'storage_path=' . $this->quote($storageInfo['disk_path']);
-			$setClauses[] = 'mimetype=' . $this->quote($storageInfo['mimetype']);
-			$setClauses[] = 'size=' . $this->quote($storageInfo['file_size']);
+			if (! empty($storageInfo['disk_path'])) {
+				$setClauses[] = 'storage_path=' . $this->quote($storageInfo['disk_path']);
+			}
+			if (! empty($storageInfo['mimetype'])) {
+				$setClauses[] = 'mimetype=' . $this->quote($storageInfo['mimetype']);
+			}
+			if (! empty($storageInfo['file_size'])) {
+				$setClauses[] = 'size=' . $this->quote($storageInfo['file_size']);
+			}
 		}
 		$setClauses[] = 'last_modification_date=NOW()';
 
@@ -756,7 +788,7 @@ class StockageTB implements CumulusInterface {
 		if ($setClausesString != '') {
 			// requete
 			$q = "UPDATE cumulus_files SET $setClausesString"
-				. " WHERE fkey=$key AND path=$path";
+				. " WHERE fkey=$key";
 			//echo "QUERY : $q\n";
 
 			$r = $this->db->exec($q);
@@ -767,17 +799,25 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Calcule une clef de fichier à partir du chemin et du nom, avec un hachage
+	 * SHA1 pour l'instant
+	 */
+	public function computeKey($path, $fileName) {
+		return sha1($path . $fileName);
+	}
+
+	/**
 	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne
 	 * supprime que la référence mais conserve le fichier dans le stockage
 	 */
-	public function deleteByKey($path, $key, $keepFile=false) {
-		$fileInfo = $this->getByKey($path, $key);
+	public function deleteByKey($key, $keepFile=false) {
+		$fileInfo = $this->getByKey($key);
 		// si le fichier existe dans la base de données
 		if ($fileInfo != false) {
 			// vérification des permissions en écriture
 			$this->checkPermissionsOnFile($fileInfo, self::$PERMISSION_WRITE);
 			// suppression de l'entrée dans la base de données
-			$deletedFromDb = $this->deleteFileReference($path, $key);
+			$deletedFromDb = $this->deleteFileReference($key);
 			if ($deletedFromDb == false) {
 				throw new Exception('storage: cannot delete file entry from database');
 			}
@@ -798,21 +838,13 @@ class StockageTB implements CumulusInterface {
 	/**
 	 * Supprime une entrée de fichier dans la base de données
 	 */
-	protected function deleteFileReference($path, $key) {
+	protected function deleteFileReference($key) {
 		if (empty($key)) {
 			throw new Exception('storage: no key specified');
 		}
 
-		// clauses
-		$clauses = array();
-		$clauses[] = "fkey = '$key'";
-		if (! empty($path)) {
-			$clauses[] = "path = '$path'";
-		}
-		$clausesString = implode(" AND ", $clauses);
-
 		//requête
-		$q = "DELETE FROM cumulus_files WHERE $clausesString";
+		$q = "DELETE FROM cumulus_files WHERE fkey = '$key'";
 		$r = $this->db->exec($q);
 
 		return $r;
@@ -823,7 +855,7 @@ class StockageTB implements CumulusInterface {
 	 * mais pas le fichier lui-même - ne fait pas de différence ici; c'est le
 	 * service qui se débrouille
 	 */
-	public function getAttributesByKey($path, $key ) {
-		return $this->getByKey($path, $key);
+	public function getAttributesByKey($key ) {
+		return $this->getByKey($key);
 	}
 }

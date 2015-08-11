@@ -44,13 +44,13 @@ class StockageDisque {
 	 * @param type $infosFichier un tableau partiellement compatible avec $_FILES
 	 *		(doit contenir "tmp_name")
 	 * @param type $cheminDossier dossier parent, relatif à la racine du stockage
-	 * @param type $clef clef ou nom du fichier
+	 * @param type $nomFichier nom du fichier
 	 */
-	public function stockerFichier($infosFichier, $cheminDossier, $clef) {
+	public function stockerFichier($infosFichier, $cheminDossier, $nomFichier) {
 		$cheminDossier = $this->preparerCheminDossier($cheminDossier);
-		$clef = $this->desinfecterNomFichier($clef);
+		$nomFichier = $this->desinfecterNomFichier($nomFichier);
 		// tantantan taaaaan !!!!
-		$destination_finale = $cheminDossier . $clef;
+		$destination_finale = $cheminDossier . $nomFichier;
 
 		// déplacement du fichier temporaire
 		$origine = $infosFichier['tmp_name'];
@@ -70,6 +70,25 @@ class StockageDisque {
 			'disk_path' => $destination_finale,
 			'mimetype' => $mimetype,
 			'file_size' => $size
+		);
+	}
+
+	/**
+	 * Renomme (déplace) un fichier, dont le nom et / ou le chemin peut avoir
+	 * changé
+	 */
+	public function renommerFichier($ancienChemin, $ancienNom, $nouveauChemin, $nouveauNom) {
+		// préparation du dossier de destination
+		$nouveauChemin = $this->preparerCheminDossier($nouveauChemin);
+
+		$ancienCheminComplet = $ancienChemin . $ancienNom;
+		$nouveauCheminComplet = $nouveauChemin . $nouveauNom;
+
+		if (! $this->deplacerFichierSurDisque($ancienCheminComplet, $nouveauCheminComplet)) {
+			throw new Exception('disk storage: cannot move file');
+		}
+		return array(
+			'disk_path' => $nouveauCheminComplet,
 		);
 	}
 

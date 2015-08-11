@@ -23,9 +23,14 @@ interface CumulusInterface {
 	public function setInverseCriteria($inverse);
 
 	/**
-	 * Retourne un fichier à partir de sa clef et son chemin
+	 * Calcule une clef de fichier à partir du chemin et du nom
 	 */
-	public function getByKey($path, $key);
+	public function computeKey($path, $fileName);
+
+	/**
+	 * Retourne un fichier à partir de sa clef
+	 */
+	public function getByKey($key);
 
 	/**
 	 * Retourne une liste de fichiers dont les noms correspondent à $name; si
@@ -89,29 +94,29 @@ interface CumulusInterface {
 	public function search($searchParams=array());
 
 	/**
-	 * Ajoute le fichier $file au stock, dans le chemin $path, avec la clef $key,
+	 * Ajoute le fichier $file au stock, dans le chemin $path, avec le nom $name,
 	 * les mots-clefs $keywords (séparés par des virgules), les groupes $groupes
 	 * (séparés par des virgules), les permissions $permissions, la licence
 	 * $license et les métadonnées $meta (portion de JSON libre). Si le fichier
 	 * existe déjà, il sera remplacé
 	 */
-	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null);
+	public function addOrUpdateFile($file, $path, $name, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null);
 
 	/**
-	 * Met à jour les métadonnées du fichier identifié par $key / $path; si
-	 * $newkey est fourni, renomme le fichier
+	 * Met à jour les métadonnées du fichier identifié par $key; si
+	 * $newname est fourni, renomme le fichier
 	 */
-	public function updateByKey($path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null);
+	public function updateByKey($key, $newname=null, $newpath=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null);
 
 	/**
-	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne
+	 * Supprime le fichier identifié par $key; si $keepFile est true, ne
 	 * supprime que la référence mais conserve le fichier dans le stockage
 	 */
-	public function deleteByKey($path, $key, $keepFile=false);
+	public function deleteByKey($key, $keepFile=false);
 
 	/**
-	 * Retourne les attributs (métadonnées) du fichier $key situé dans $path,
+	 * Retourne les attributs (métadonnées) du fichier identifié par $key,
 	 * mais pas le fichier lui-même
 	 */
-	public function getAttributesByKey($path, $key);
+	public function getAttributesByKey($key);
 }

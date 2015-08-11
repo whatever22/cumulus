@@ -60,20 +60,20 @@ class CumulusService extends BaseService {
 	 */
 	protected function buildLinksAndRemoveStoragePaths(&$results) {
 		foreach ($results as &$r) {
-			$r['href'] = $this->buildLink($r['fkey'], $r['path']);
+			$r['href'] = $this->buildLink($r['fkey']);
 			unset($r['storage_path']);
 		}
 	}
 
 	/**
 	 * Retourne un lien de téléchargement relatif à l'URL de base du service,
-	 * pour une clef de fichier et un chemin données
+	 * pour une clef de fichier donnée
 	 */
-	protected function buildLink($key, $path="/") {
+	protected function buildLink($key) {
 		if (empty($key)) {
 			return false;
 		}
-		$href = $this->domainRoot . $this->baseURI . $path . "/" . $key;
+		$href = $this->domainRoot . $this->baseURI . $key;
 		return $href;
 	}
 
@@ -189,17 +189,38 @@ class CumulusService extends BaseService {
 	}
 
 	/**
-	 * GET http://tb.org/cumulus.php/chemin/arbitraire/clef
+	 * GET http://tb.org/cumulus.php/clef
 	 * 
-	 * Récupère le fichier clef contenu dans le répertoire /chemin/arbitraire
-	 * (déclenche son téléchargement)
+	 * Récupère le fichier identifié par clef (déclenche son téléchargement)
 	 */
 	protected function getByKey() {
 		$key = array_pop($this->resources);
+
+		//echo "getByKey : [$key]\n";
+		$file = $this->lib->getByKey($key);
+
+		if ($file == false) {
+			$this->sendError("file not found", 404);
+		} else {
+			$this->sendFile($file['storage_path'], $file['mimetype']);
+		}
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/chemin/arbitraire/nom.ext
+	 * 
+	 * Récupère le fichier nom.ext contenu dans le répertoire /chemin/arbitraire
+	 * (déclenche son téléchargement)
+	 */
+	protected function getByCompletePath() {
+
+		$fileName = array_pop($this->resources);
 		$path = '/' . implode('/', $this->resources);
 
-		//echo "getByKey : [$path] [$key]\n";
-		$file = $this->lib->getByKey($path, $key);
+		//echo "getByCompletePath : [$path] [$fileName]\n";
+		// calcul de la clef
+		$key = $this->lib->computeKey($path, $fileName);
+		$file = $this->lib->getByKey($key);
 
 		if ($file == false) {
 			$this->sendError("file not found", 404);
@@ -513,11 +534,12 @@ class CumulusService extends BaseService {
 	 * n'est spécifié, modifie les métadonnées de la clef ciblée
 	 */
 	protected function post() {
-		$key = array_pop($this->resources);
+		$name = array_pop($this->resources);
 		$path = '/' . implode('/', $this->resources);
 
 		// extraction des paramètres POST
-		$newkey = $this->getParam('newkey');
+		$newname = $this->getParam('newname');
+		$newpath = $this->getParam('newpath');
 		$keywords = $this->explode(',', $this->getParam('keywords'));
 		$groups = $this->explode(',', $this->getParam('groups'));
 		$permissions = $this->getParam('permissions');
@@ -575,10 +597,10 @@ class CumulusService extends BaseService {
 		$info = false;
 		if ($file == null) {
 			// mise à jour métadonnées seulement
-			$info = $this->lib->updateByKey($path, $key, $newkey, $keywords, $groups, $permissions, $license, $meta);
+			$info = $this->lib->updateByKey($key, $newname, $newpath, $keywords, $groups, $permissions, $license, $meta);
 		} else {
 			// ajout / mise à jour de fichier
-			$info = $this->lib->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+			$info = $this->lib->addOrUpdateFile($file, $path, $name, $keywords, $groups, $permissions, $license, $meta);
 		}
 
 		if ($info == false) {

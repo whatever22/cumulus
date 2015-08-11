@@ -71,10 +71,17 @@ class Cumulus implements CumulusInterface {
 	}
 
 	/**
-	 * Retourne un fichier à partir de sa clef et son chemin
+	 * Calcule une clef de fichier à partir du chemin et du nom
 	 */
-	public function getByKey($path, $key) {
-		return $this->storageAdapter->getByKey($path, $key);
+	public function computeKey($path, $fileName) {
+		return $this->storageAdapter->computeKey($path, $fileName);
+	}
+
+	/**
+	 * Retourne un fichier à partir de sa clef
+	 */
+	public function getByKey($key) {
+		return $this->storageAdapter->getByKey($key);
 	}
 
 	/**
@@ -163,31 +170,31 @@ class Cumulus implements CumulusInterface {
 	 * $license et les métadonnées $meta (portion de JSON libre). Si le fichier
 	 * existe déjà, il sera remplacé
 	 */
-	public function addOrUpdateFile($file, $path, $key, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
-		return $this->storageAdapter->addOrUpdateFile($file, $path, $key, $keywords, $groups, $permissions, $license, $meta);
+	public function addOrUpdateFile($file, $path, $name, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		return $this->storageAdapter->addOrUpdateFile($file, $path, $name, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**
-	 * Met à jour les métadonnées du fichier identifié par $key / $path; si
-	 * $newkey est fourni, renomme le fichier
+	 * Met à jour les métadonnées du fichier identifié par $key; si
+	 * $newname est fourni, renomme le fichier
 	 */
-	public function updateByKey($path, $key, $newkey=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
-		return $this->storageAdapter->updateByKey($path, $key, $newkey, $keywords, $groups, $permissions, $license, $meta);
+	public function updateByKey($key, $newname=null, $newpath=null, $keywords=null, $groups=null, $permissions=null, $license=null, $meta=null) {
+		return $this->storageAdapter->updateByKey($key, $newname, $newpath, $keywords, $groups, $permissions, $license, $meta);
 	}
 
 	/**
-	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne
+	 * Supprime le fichier identifié par $key; si $keepFile est true, ne
 	 * supprime que la référence mais conserve le fichier dans le stockage
 	 */
-	public function deleteByKey($path, $key, $keepFile=false) {
-		return $this->storageAdapter->deleteByKey($path, $key, $keepFile);
+	public function deleteByKey($key, $keepFile=false) {
+		return $this->storageAdapter->deleteByKey($key, $keepFile);
 	}
 
 	/**
-	 * Retourne les attributs (métadonnées) du fichier $key situé dans $path,
+	 * Retourne les attributs (métadonnées) du fichier identifié par $key,
 	 * mais pas le fichier lui-même
 	 */
-	public function getAttributesByKey($path, $key) {
-		return $this->storageAdapter->getAttributesByKey($path, $key);
+	public function getAttributesByKey($key) {
+		return $this->storageAdapter->getAttributesByKey($key);
 	}
 }

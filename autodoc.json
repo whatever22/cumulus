@@ -72,7 +72,7 @@
 				"meta": "portion de JSON libre"
 			},
 			"Ajoute au stockage le fichier uploadé; lui donne la clef clef; lui donne comme répertoire parent /chemin/arbitraire; les autres paramètres sont explicites.",
-			"Seront détectés : mimetype, size, original_name, user (si un jeton d'authentification est présent).",
+			"Seront détectés : mimetype, size, name, user (si un jeton d'authentification est présent).",
 			"Si file est une URL, le fichier sera un pointeur sur cette URL.",
 			"creation_date et last_modification_date seront définis à la date courante. Renvoie les attributs."
 		],
@@ -88,7 +88,7 @@
 				"meta": "portion de JSON libre"
 			},
 			"Ajoute au stockage le fichier présent dans file; lui donne la clef clef; lui donne comme répertoire parent /chemin/arbitraire; les autres paramètres sont explicites.",
-			"Seront détectés : mimetype, size, original_name, user (si un jeton d'authentification est présent).",
+			"Seront détectés : mimetype, size, name, user (si un jeton d'authentification est présent).",
 			"Si file est une URL, le fichier sera un pointeur sur cette URL.",
 			"creation_date et last_modification_date seront définis à la date courante. Renvoie les attributs."
 		],
@@ -101,7 +101,7 @@
 	"output format": 
 	{
 		"fkey": "clef",
-		"original_name": "nom du fichier",
+		"name": "nom du fichier",
 		"path": "chemin du fichier (dossier parent)",
 		"mimetype": "type MIME du fichier",
 		"size": "taille du fichier en octets",
