@@ -55,19 +55,27 @@ class CumulusService extends BaseService {
 	}
 
 	/**
-	 * Ajoute un lien de téléchargement "href" à chaque fichier du jeu de
-	 * données, et supprime la valeur de "storage_path" (par sécurité)
+	 * Appelle $this->buildLinkAndRemoveStoragePath() sur chaque fichier du jeu
+	 * de données
 	 */
 	protected function buildLinksAndRemoveStoragePaths(&$results) {
 		foreach ($results as &$r) {
-			// fichier stocké ou référence vers une URL ?
-			if (preg_match(self::$REF_PATTERN, $r['storage_path']) != false) {
-				$r['href'] = $r['storage_path'];
-			} else {
-				$r['href'] = $this->buildLink($r['fkey']);
-			}
-			unset($r['storage_path']);
+			$this->buildLinkAndRemoveStoragePath($r);
 		}
+	}
+
+	/**
+	 * Ajoute un lien de téléchargement "href" au fichier, et supprime la valeur
+	 * de "storage_path" (par sécurité)
+	 */
+	function buildLinkAndRemoveStoragePath(&$r) {
+		// fichier stocké ou référence vers une URL ?
+		if (preg_match(self::$REF_PATTERN, $r['storage_path']) != false) {
+			$r['href'] = $r['storage_path'];
+		} else {
+			$r['href'] = $this->buildLink($r['fkey']);
+		}
+		unset($r['storage_path']);
 	}
 
 	/**
@@ -606,6 +614,7 @@ class CumulusService extends BaseService {
 		if ($info == false) {
 			$this->sendError("error while sending file");
 		} else {
+			$this->buildLinkAndRemoveStoragePath($info);
 			$this->sendJson($info);
 		}
 	}
@@ -634,11 +643,11 @@ class CumulusService extends BaseService {
 
 		//echo "options : [$key]\n";
 		$file = $this->lib->getAttributesByKey($key);
-		$file['href'] = $this->buildLink($file['fkey']);
 
 		if ($file == false) {
 			$this->sendError("file not found", 404);
 		} else {
+			$this->buildLinkAndRemoveStoragePath($file);
 			$this->sendJson($file);
 		}
 	}
