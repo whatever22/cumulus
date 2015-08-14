@@ -315,6 +315,54 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Retourne une liste de dossiers se trouvant sous $path; si $recursive est
+	 * true, renvoie aussi leurs sous-dossiers
+	 */
+	public function getFolders($path, $recursive=false) {
+		if (empty($path)) {
+			throw new Exception('storage: no path specified');
+		}
+
+		// préparation du chemin, qui doit se terminer par un '/'
+		$path = rtrim($path, '/') . '/';
+		$pathLike = $path . '%';
+		$path = $this->quote($path);
+		$pathLike = $this->quote($pathLike);
+
+		// requête
+		if ($recursive === true) {
+			$q = "SELECT DISTINCT path as folder_path,"
+				. "SUBSTR(path, LENGTH($path)+1) as folder "
+				. "FROM cumulus_files "
+				. "WHERE path LIKE $pathLike "
+				. "ORDER BY folder";
+		} else {
+			$q = "SELECT DISTINCT IF("
+				. "LOCATE('/', path, LENGTH($path)+1) = 0,"
+				. "path,"
+				. "SUBSTR(path, 1, LOCATE('/', path, LENGTH($path)+1) - 1)"
+				. ") as folder_path, IF("
+				. "LOCATE('/', path, LENGTH($path)+1) = 0,"
+				. "SUBSTR(path, LENGTH($path)+1),"
+				. "SUBSTR(path, LENGTH($path)+1, LOCATE('/', path, LENGTH($path)+1) - LENGTH('/') - 1)"
+				. ") as folder "
+				. "FROM cumulus_files "
+				. "WHERE path LIKE $pathLike ORDER BY folder";
+		}
+		//echo "QUERY : $q\n";
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetchAll();
+			$formattedData = array();
+			foreach($data as $d) {
+				$formattedData[$d['folder_path']] = $d['folder'];
+			}
+			return $formattedData;
+		}
+		return false;
+	}
+
+	/**
 	 * Retourne une liste de fichiers dont les noms correspondent à $name; si
 	 * $trict est true, compare avec un "=" sinon avec un "LIKE"
 	 */

@@ -149,6 +149,9 @@ class CumulusService extends BaseService {
 		$firstResource = $this->resources[0];
 		// mode de récupération du/des fichiers
 		switch($firstResource) {
+			case "get-folders":
+				$this->getFolders();
+				break;
 			case "by-name":
 				$this->getByName();
 				break;
@@ -227,6 +230,28 @@ class CumulusService extends BaseService {
 		} else {
 			$this->sendFile($file['storage_path'], $file['name'], $file['size'], $file['mimetype']);
 		}
+	}
+
+	/**
+	 * GET http://tb.org/cumulus.php/get-folders/root/path
+	 * GET http://tb.org/cumulus.php/get-folders/root/path?R
+	 * 
+	 * Renvoie une liste de dossiers se trouvant sous "/root/path"; si ?R est
+	 * utilisé, renvoie aussi leurs sous-dossiers
+	 */
+	protected function getFolders() {
+		array_shift($this->resources);
+		$path = '/' . implode('/', $this->resources);
+		$recursive = false;
+		if ($this->getParam('R') !== null) {
+			$recursive = true;
+		}
+
+		//echo "getFolders : [$path]\n";
+		//var_dump($recursive);
+		$folders = $this->lib->getFolders($path, $recursive);
+
+		$this->sendJson($folders);
 	}
 
 	/**

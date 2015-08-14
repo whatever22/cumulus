@@ -93,6 +93,14 @@ class Cumulus implements CumulusInterface {
 	}
 
 	/**
+	 * Retourne une liste de dossiers se trouvant sous $path; si $recursive est
+	 * true, renvoie aussi leurs sous-dossiers
+	 */
+	public function getFolders($path, $recursive=false) {
+		return $this->storageAdapter->getFolders($path, $recursive);
+	}
+
+	/**
 	 * Retourne une liste de fichiers dont les noms correspondent à $name; si
 	 * $trict est true, compare avec un "=" sinon avec un "LIKE"
 	 */
