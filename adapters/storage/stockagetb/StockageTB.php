@@ -334,8 +334,7 @@ class StockageTB implements CumulusInterface {
 			$q = "SELECT DISTINCT path as folder_path,"
 				. "SUBSTR(path, LENGTH($path)+1) as folder "
 				. "FROM cumulus_files "
-				. "WHERE path LIKE $pathLike "
-				. "ORDER BY folder";
+				. "WHERE path LIKE $pathLike";
 		} else {
 			$q = "SELECT DISTINCT IF("
 				. "LOCATE('/', path, LENGTH($path)+1) = 0,"
@@ -344,12 +343,18 @@ class StockageTB implements CumulusInterface {
 				. ") as folder_path, IF("
 				. "LOCATE('/', path, LENGTH($path)+1) = 0,"
 				. "SUBSTR(path, LENGTH($path)+1),"
-				. "SUBSTR(path, LENGTH($path)+1, LOCATE('/', path, LENGTH($path)+1) - LENGTH('/') - 1)"
+				. "SUBSTR(path, LENGTH($path)+1, LOCATE('/', path, LENGTH($path)+1) - LENGTH($path) - 1)"
 				. ") as folder "
 				. "FROM cumulus_files "
-				. "WHERE path LIKE $pathLike ORDER BY folder";
+				. "WHERE path LIKE $pathLike";
 		}
-		//echo "QUERY : $q\n";
+		// vérification des droits
+		$q .= " AND " . $this->getRightsCheckingClause();
+		// tri
+		$q .= " ORDER BY folder";
+
+		//echo $q;
+		//exit;
 		$r = $this->db->query($q);
 		if ($r != false) {
 			$data = $r->fetchAll();
