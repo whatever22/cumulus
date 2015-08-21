@@ -360,7 +360,10 @@ class StockageTB implements CumulusInterface {
 			$data = $r->fetchAll();
 			$formattedData = array();
 			foreach($data as $d) {
-				$formattedData[$d['folder_path']] = $d['folder'];
+				$formattedData[] = array(
+					'folder' => $d['folder_path'],
+					'name' => $d['folder']
+				);
 			}
 			return $formattedData;
 		}
@@ -389,9 +392,10 @@ class StockageTB implements CumulusInterface {
 
 	/**
 	 * Retourne une liste de fichiers se trouvant dans le répertoire $path; si
-	 * $recursive est true, cherchera dans tous les sous-répertoires
+	 * $recursive est true, cherchera dans tous les sous-répertoires; si
+	 * $includeFolders est true, incluera les dossiers présents sous le chemin
 	 */
-	public function getByPath($path, $recursive=false) {
+	public function getByPath($path, $recursive=false, $includeFolders=false) {
 		if (empty($path)) {
 			throw new Exception('storage: no path specified');
 		}
@@ -404,7 +408,17 @@ class StockageTB implements CumulusInterface {
 		// vérification des droits
 		$clause .= " AND " . $this->getRightsCheckingClause();
 
-		return $this->queryMultipleFiles($clause);
+		$data = $this->queryMultipleFiles($clause);
+
+		// inclusion des dossiers ?
+		if ($includeFolders === true) {
+			$folders = $this->getFolders($path, $recursive);
+			foreach ($folders as $folder) {
+				$data[] = $folder;
+			}
+		}
+
+		return $data;
 	}
 
 	/**

@@ -70,12 +70,14 @@ class CumulusService extends BaseService {
 	 */
 	function buildLinkAndRemoveStoragePath(&$r) {
 		// fichier stocké ou référence vers une URL ?
-		if (preg_match(self::$REF_PATTERN, $r['storage_path']) != false) {
-			$r['href'] = $r['storage_path'];
-		} else {
-			$r['href'] = $this->buildLink($r['fkey']);
+		if (isset($r['storage_path'])) { // élimine les dossiers
+			if (preg_match(self::$REF_PATTERN, $r['storage_path']) != false) {
+				$r['href'] = $r['storage_path'];
+			} else {
+				$r['href'] = $this->buildLink($r['fkey']);
+			}
+			unset($r['storage_path']);
 		}
-		unset($r['storage_path']);
 	}
 
 	/**
@@ -286,6 +288,11 @@ class CumulusService extends BaseService {
 	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin?R
 	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
 	 * un dossier dont le chemin est /mon/super/chemin ou un sous-dossier
+	 * 
+	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin?FOLDERS
+	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
+	 * un dossier dont le chemin est /mon/super/chemin ou un sous-dossier et y
+	 * ajoute une liste des "dossiers" présents sous ce chemin
 	 */
 	protected function getByPath() {
 		array_shift($this->resources);
@@ -294,10 +301,14 @@ class CumulusService extends BaseService {
 		if ($this->getParam('R') !== null) {
 			$recursive = true;
 		}
+		$includeFolders = false;
+		if ($this->getParam('FOLDERS') !== null) {
+			$includeFolders = true;
+		}
 
 		//echo "getByPath : [$path]\n";
 		//var_dump($recursive);
-		$files = $this->lib->getByPath($path, $recursive);
+		$files = $this->lib->getByPath($path, $recursive, $includeFolders);
 
 		$this->sendMultipleResults($files);
 	}
