@@ -52,9 +52,10 @@ interface CumulusInterface {
 
 	/**
 	 * Retourne une liste de fichiers se trouvant dans le répertoire $path; si
-	 * $recursive est true, cherchera dans tous les sous-répertoires
+	 * $recursive est true, cherchera dans tous les sous-répertoires; si
+	 * $includeFolders est true, incluera les dossiers présents sous le chemin
 	 */
-	public function getByPath($path, $recursive=false);
+	public function getByPath($path, $recursive=false, $includeFolders=false);
 
 	/**
 	 * Retourne une liste de fichiers dont les mots-clefs sont $keywords
