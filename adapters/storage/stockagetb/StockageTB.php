@@ -5,14 +5,6 @@ require 'StockageDisque.php';
 /**
  * Adapteur par défaut de la couche de stockage de Cumulus - utilise une base de
  * données MySQL
- * 
- * ATTENTION - on considère que la clef primaire est (fkey,path) et on ne fait
- * pas de vérifications d'unicité dans le code; cependant, la limitation de la
- * taille de clef d'InnoDB à 767 octets implique de fortes limitations sur les
- * tailles de chemin (path) et de nom de fichier (fkey) maximales
- * 
- * @TODO considérer l'utilisation d'une clef (fkey) qui ne soit pas le nom de
- * fichier, et utiliser seulement cette colonne comme clef primaire
  */
 class StockageTB implements CumulusInterface {
 
