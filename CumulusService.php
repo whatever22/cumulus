@@ -11,10 +11,6 @@ class CumulusService extends BaseService {
 	/** Bibliothèque Cumulus */
 	protected $lib;
 
-	/** Config en JSON */
-	protected $config = array();
-	public static $CONFIG_PATH = "config/service.json";
-
 	/** Autodocumentation en JSON */
 	public static $AUTODOC_PATH = "autodoc.json";
 
@@ -22,13 +18,6 @@ class CumulusService extends BaseService {
 	public static $REF_PATTERN = '`https?://`';
 
 	public function __construct() {
-		// config
-		if (file_exists(self::$CONFIG_PATH)) {
-			$this->config = json_decode(file_get_contents(self::$CONFIG_PATH), true);
-		} else {
-			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
-		}
-
 		// lib Cumulus
 		$this->lib = new Cumulus();
 

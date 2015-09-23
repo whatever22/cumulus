@@ -7,6 +7,10 @@
  */
 class BaseService {
 
+	/** Config en JSON */
+	protected $config = array();
+	public static $CONFIG_PATH = "config/service.json";
+
 	/** HTTP verb received (GET, POST, PUT, DELETE, OPTIONS) */
 	protected $verb;
 
@@ -23,6 +27,13 @@ class BaseService {
 	protected $baseURI;
 
 	public function __construct() {
+		// config
+		if (file_exists(self::$CONFIG_PATH)) {
+			$this->config = json_decode(file_get_contents(self::$CONFIG_PATH), true);
+		} else {
+			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
+		}
+
 		// méthode HTTP
 		$this->verb = $_SERVER['REQUEST_METHOD'];
 
