@@ -38,7 +38,7 @@ class AuthTB {
 	}
 
 	/**
-	 * Retourne les groupes auwquels l'utilisateur en cours appartient
+	 * Retourne les groupes auxquels l'utilisateur en cours appartient
 	 */
 	public function getUserGroups() {
 		return $this->groups;
