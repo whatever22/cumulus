@@ -180,9 +180,6 @@ class CumulusService extends BaseService {
 	 */
 	protected function usage() {
 		$rootUri = $this->domainRoot . $this->baseURI . "/";
-		$infos = array(
-			"error" => "wrong URI"
-		);
 		// lecture de l'autodoc en JSON et remplacement de l'URI racine
 		if (file_exists(self::$AUTODOC_PATH)) {
 			$infos = json_decode(file_get_contents(self::$AUTODOC_PATH), true);
@@ -191,8 +188,10 @@ class CumulusService extends BaseService {
 					$up[$k] = str_replace("__ROOTURI__", $rootUri, $up[$k]);
 				}
 			}
+			$this->sendJson($infos);
+		} else {
+			$this->sendError("wrong URI");
 		}
-		$this->sendJson($infos);
 	}
 
 	/**
