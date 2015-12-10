@@ -57,7 +57,7 @@ class StockageDisque {
 		if (! $this->deplacerFichierSurDisque($origine, $destination_finale)) {
 			throw new Exception('disk storage: cannot move temporary file');
 		}
-		
+
 		// détection du mimetype
 		$finfo = finfo_open(FILEINFO_MIME_TYPE);
 		$mimetype = finfo_file($finfo, $destination_finale);
