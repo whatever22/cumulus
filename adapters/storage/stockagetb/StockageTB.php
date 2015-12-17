@@ -299,7 +299,7 @@ class StockageTB implements CumulusInterface {
 			if (! empty($data[0])) {
 				// vérification des droits
 				$this->checkPermissionsOnFile($data[0]);
-				// ajout 
+				// ajout
 				return $data[0];
 			}
 		}
@@ -671,7 +671,7 @@ class StockageTB implements CumulusInterface {
 		$clausesString = implode($operator, $clauses);
 		// vérification des droits
 		$clausesString = '(' . $clausesString . ') AND ' . $this->getRightsCheckingClause();
-	
+
 		return $this->queryMultipleFiles($clausesString);
 	}
 
@@ -760,6 +760,7 @@ class StockageTB implements CumulusInterface {
 		$diskPath = $this->quote($storageInfo['disk_path']);
 		$mimetype = $this->quote($storageInfo['mimetype']);
 		$fileSize = $this->quote($storageInfo['file_size']);
+		$creationDate = $this->quote((new DateTime('now'))->format('Y-m-d H:i:s'));
 
 		// gestion du propriétaire
 		$owner = $this->quote($this->authAdapter->getUserId());
@@ -767,7 +768,7 @@ class StockageTB implements CumulusInterface {
 		// requete
 		$q = "INSERT INTO cumulus_files VALUES ($key, $name, $path"
 			. ", $diskPath, $mimetype, $fileSize, $owner, $groups, $permissions"
-			. ", $keywords, $license, $meta, DEFAULT, DEFAULT)";
+			. ", $keywords, $license, $meta, $creationDate, $creationDate)";
 		//echo "QUERY : $q\n";
 
 		$r = $this->db->exec($q);
