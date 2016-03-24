@@ -45,7 +45,7 @@ function reconstruire_mimetype_et_taille($argc, $argv) {
 	while ($ligne = $resFic->fetch()) {
 		$fichiers[$ligne['fkey']] = $ligne['storage_path'];
 	}
-	var_dump($fichiers);
+	//var_dump($fichiers);
 	echo count($fichiers) . " fichiers trouvés\n";
 
 	$cptUpd = 0;
