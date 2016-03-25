@@ -21,6 +21,10 @@ class CumulusService extends BaseService {
 		// lib Cumulus
 		$this->lib = new Cumulus();
 
+		// ne pas indexer - placé ici pour simplifier l'utilisation avec nginx
+		// (pas de .htaccess)
+		header("X-Robots-Tag: noindex, nofollow", true);
+
 		parent::__construct();
 	}
 
