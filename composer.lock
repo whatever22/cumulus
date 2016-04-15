@@ -1,0 +1,64 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
+        "This file is @generated automatically"
+    ],
+    "hash": "2419994e44e5ef94fa7f20c676fe7678",
+    "content-hash": "d05507f1ec9722157fbde8ba0fe82bb7",
+    "packages": [
+        {
+            "name": "telabotanica/tb-auth-php",
+            "version": "0.1.1a",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/telabotanica/tb-auth-php.git",
+                "reference": "661b50f7a34f52d6fc347e10a9b21441da8a1438"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/telabotanica/tb-auth-php/zipball/661b50f7a34f52d6fc347e10a9b21441da8a1438",
+                "reference": "661b50f7a34f52d6fc347e10a9b21441da8a1438",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "AuthTB": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPLv3"
+            ],
+            "authors": [
+                {
+                    "name": "Mathias Chouet",
+                    "email": "mathias@tela-botanica.org"
+                }
+            ],
+            "description": "A library that helps integrating your PHP software with Tela Botanica's SSO",
+            "homepage": "https://github.com/telabotanica/tb-auth-php",
+            "keywords": [
+                "SSO",
+                "tela botanica",
+                "tela-botanica",
+                "telabotanica"
+            ],
+            "time": "2016-03-09 13:17:58"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "stable",
+    "stability-flags": {
+        "telabotanica/tb-auth-php": 20
+    },
+    "prefer-stable": false,
+    "prefer-lowest": false,
+    "platform": [],
+    "platform-dev": []
+}

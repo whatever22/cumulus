@@ -1,0 +1,5 @@
+{
+    "require": {
+		"telabotanica/tb-auth-php": "0.1.1a@dev"
+    }
+}

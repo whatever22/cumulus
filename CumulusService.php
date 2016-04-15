@@ -583,8 +583,12 @@ class CumulusService extends BaseService {
 		$meta = json_decode($this->getParam('meta'), true);
 
 		$file = false;
+		$serverContentType = '';
+		if (! empty($_SERVER["CONTENT_TYPE"])) {
+			$serverContentType = $_SERVER["CONTENT_TYPE"];
+		}
 		// détection de la méthode d'envoi
-		$isMPFD = strtolower(substr($_SERVER["CONTENT_TYPE"], 0, 19)) == 'multipart/form-data';
+		$isMPFD = strtolower(substr($serverContentType, 0, 19)) == 'multipart/form-data';
 		if ($isMPFD) { // envoi de formulaire classique avec multipart/form-data
 			// détection : fichier ou référence (URL) ?
 			if (! empty($_FILES['file'])) {
@@ -602,7 +606,7 @@ class CumulusService extends BaseService {
 				} // sinon pas de fichier spécifié => modif de métadonnées
 			}
 		} else {
-			$isJSON = strtolower(substr($_SERVER["CONTENT_TYPE"], 0, 16)) == 'application/json';
+			$isJSON = strtolower(substr($serverContentType, 0, 16)) == 'application/json';
 			if ($isJSON) { // fichier en base64 dans le paramètre "file"
 				$requestBody = $this->readRequestBody();
 				$jsonData = json_decode($requestBody, true);

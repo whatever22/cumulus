@@ -12,11 +12,13 @@
 			},
 			"storage_root": "/home/fernand/path/to/storage"
 		},
-		"AuthTB": {
-			"AnnuaireURL": "https://localhost/service:annuaire:auth",
+		"AuthProxyTB": {
+			"annuaireURL": "https://localhost/service:annuaire:auth",
 			"admins": [
-				"john@mywebsite.org"
-			]
+				"john@stuff.org"
+			],
+			"ignoreSSLIssues": false,
+			"headerName": "Authorization"
 		}
 	}
 }

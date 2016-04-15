@@ -1,6 +1,9 @@
 <?php
 
-require 'CumulusInterface.php';
+require_once 'CumulusInterface.php';
+require_once 'adapters/auth/AuthAdapter.php';
+// composer
+require_once 'vendor/autoload.php';
 
 /**
  * Bibliothèque pour le stockage de fichiers ("cloud") - API : fournit les
@@ -37,7 +40,7 @@ class Cumulus implements CumulusInterface {
 		$this->storageAdapter = new $storageAdapterName($this->config);
 
 		// adapteur d'authentification / gestion des droits
-		$authAdapter = null;
+		$authAdapter = new AuthAdapter; // adapteur fantoche par défaut (aucune gestion des droits, tout le monde est admin)
 		// gestion des droits facultative
 		if (! empty($this->config['authAdapter'])) {
 			$authAdapterName = $this->config['authAdapter'];
@@ -47,9 +50,8 @@ class Cumulus implements CumulusInterface {
 				throw new Exception ("auth adapter " . $authAdapterPath . " doesn't exist");
 			}
 			require $authAdapterPath;
-			// on passe la config à l'adapteur - à lui de stocker ses paramètres
-			// dans un endroit correct (adapters.nomdeladapteur par exemple)
-			$authAdapter = new $authAdapterName($this->config);
+			// on passe la section de la config relative à l'adapteur (voir AuthTB)
+			$authAdapter = new $authAdapterName($this, $this->config['adapters'][$authAdapterName]);
 		}
 		// on passe l'adapteur d'authentification à l'adapteur de stockage
 		$this->setAuthAdapter($authAdapter);
