@@ -82,9 +82,19 @@ class Cumulus implements CumulusInterface {
 	/**
 	 * Retourne true si $string est une clef
 	 * @WARNING difficile à rendre déterministe !
+	 * @TODO chercher dans la BDD si cette clef existe; ne répond pas vraiment
+	 *		à la même question mais ça peut être utile
 	 */
 	public function isKey($string) {
 		return $this->storageAdapter->isKey($string);
+	}
+
+	/**
+	 * Retourne true si $string représente un dossier, c'est à dire un chemin
+	 * contenant au moins un fichier
+	 */
+	public function isFolder($string) {
+		return $this->storageAdapter->isFolder($string);
 	}
 
 	/**
@@ -100,6 +110,15 @@ class Cumulus implements CumulusInterface {
 	 */
 	public function getFolders($path, $recursive=false) {
 		return $this->storageAdapter->getFolders($path, $recursive);
+	}
+
+	/**
+	 * Retourne une liste des fichiers et dossiers se trouvant sous $path; si
+	 * $recursive est true, renvoie aussi les sous-dossiers et les fichiers
+	 * qu'ils contiennent
+	 */
+	public function getFolderContents($path, $recursive=false) {
+		return $this->storageAdapter->getFolderContents($path, $recursive);
 	}
 
 	/**

@@ -34,6 +34,12 @@ interface CumulusInterface {
 	public function isKey($string);
 
 	/**
+	 * Retourne true si $string représente un dossier, c'est à dire un chemin
+	 * contenant au moins un fichier
+	 */
+	public function isFolder($string);
+
+	/**
 	 * Retourne un fichier à partir de sa clef
 	 */
 	public function getByKey($key);
@@ -43,6 +49,13 @@ interface CumulusInterface {
 	 * true, renvoie aussi leurs sous-dossiers
 	 */
 	public function getFolders($path, $recursive=false);
+
+	/**
+	 * Retourne une liste des fichiers et dossiers se trouvant sous $path; si
+	 * $recursive est true, renvoie aussi les sous-dossiers et les fichiers
+	 * qu'ils contiennent
+	 */
+	public function getFolderContents($path, $recursive=false);
 
 	/**
 	 * Retourne une liste de fichiers dont les noms correspondent à $name; si

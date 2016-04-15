@@ -239,7 +239,7 @@ class StockageTB implements CumulusInterface {
 
 		if ($hasNoRights) {
 			// vous n'avez pas les droits
-			throw new Exception("storage: insufficent persmissions");
+			throw new Exception("storage: insufficent permissions");
 		} // sinon tout va bien
 	}
 
@@ -360,6 +360,21 @@ class StockageTB implements CumulusInterface {
 			return $formattedData;
 		}
 		return false;
+	}
+
+	/**
+	 * Retourne une liste des fichiers et dossiers se trouvant sous $path; si
+	 * $recursive est true, renvoie aussi les sous-dossiers et les fichiers
+	 * qu'ils contiennent
+	 */
+	public function getFolderContents($path, $recursive=false) {
+		$subFolders = $this->getFolders($path, $recursive);
+		$files = $this->getByPath($path, $recursive);
+		$data = array(
+			'folders' => $subFolders,
+			'files' => $files
+		);
+		return $data;
 	}
 
 	/**
@@ -923,6 +938,26 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Retourne true si $string représente un dossier, c'est à dire un chemin
+	 * contenant au moins un fichier
+	 */
+	public function isFolder($string) {
+		$pathLike = $string . '/%';
+		$path = $this->quote($string);
+		$pathLike = $this->quote($pathLike);
+
+		$clause = "path = $path OR path LIKE $pathLike";
+		$q = "SELECT count(*) as nb FROM cumulus_files WHERE $clause";
+		//echo "QUERY : $q\n"; exit;
+		$r = $this->db->query($q);
+		if ($r != false) {
+			$data = $r->fetch();
+			return (! empty($data['nb']) && $data['nb'] >= 1);
+		}
+		return false;
+	}
+
+	/**
 	 * Supprime le fichier $key situé dans $path; si $keepFile est true, ne
 	 * supprime que la référence mais conserve le fichier dans le stockage
 	 */
@@ -958,6 +993,7 @@ class StockageTB implements CumulusInterface {
 		if (empty($key)) {
 			throw new Exception('storage: no key specified');
 		}
+		$key = $this->quote($key);
 
 		//requête
 		$q = "DELETE FROM cumulus_files WHERE fkey = '$key'";

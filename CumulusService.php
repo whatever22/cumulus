@@ -29,8 +29,8 @@ class CumulusService extends BaseService {
 	}
 
 	/**
-	 * Renvoie plusieurs résultats $results dans un objet JSON, en remplaçant le
-	 * chemin de stockage par un lien de téléchargement
+	 * Renvoie plusieurs résultats $results dans un objet JSON, en remplaçant
+	 * les chemins de stockage par des liens de téléchargement
 	 */
 	protected function sendMultipleResults($results, $errorMessage="no results", $errorCode=404) {
 		if ($results == false) {
@@ -44,6 +44,31 @@ class CumulusService extends BaseService {
 					"results" => $results
 				)
 			);
+		}
+	}
+
+	/**
+	 * Renvoie une liste de listes de résultats (pour getFolderContents() par
+	 * exemple) dans un objet JSON, en remplaçant les chemins de stockage par
+	 * des liens de téléchargement
+	 */
+	protected function sendMultipleMixedResults($results, $errorMessage="no results", $errorCode=404) {
+		if ($results == false) {
+			$this->sendError($errorMessage, $errorCode);
+		} else {
+			$mixedResults = array();
+			// traitement des sous-listes
+			foreach ($results as $k => $subList) {
+				// comptage des éléments
+				$partialResult = array(
+					"count" => count($subList),
+					"results" => $subList
+				);
+				// création des liens de téléchargement
+				$this->buildLinksAndRemoveStoragePaths($partialResult["results"]);
+				$mixedResults[$k] = $partialResult;
+			}
+			$this->sendJson($mixedResults);
 		}
 	}
 
@@ -129,6 +154,7 @@ class CumulusService extends BaseService {
 		http_response_code(200);
 
 		// il faut au moins une ressource : clef ou méthode
+		// @TODO permettre de faire getFolderContents() sur la racine
 		if (empty($this->resources[0])) {
 			$this->usage();
 			return false;
@@ -203,26 +229,46 @@ class CumulusService extends BaseService {
 	 * GET http://tb.org/cumulus.php/chemin/arbitraire/nom.ext
 	 * 
 	 * Récupère le fichier identifié par clef ou par le couple chemin / nom
-	 * (déclenche son téléchargement)
+	 * (déclenche son téléchargement); si le chemin désigne un dossier, renvoie
+	 * le descriptif du dossier: liste des fichiers et des sous-dossiers
 	 */
 	protected function getByKeyOrCompletePath() {
+		$fullPath = rtrim('/' . implode('/', $this->resources), '/');
 		$nameOrKey = array_pop($this->resources);
 		$path = '/' . implode('/', $this->resources);
 
-		// A-t-on passé une clef (mise à jour) ou un couple chemin / nom
-		$key = $nameOrKey;
-		if (! $this->lib->isKey($nameOrKey)) {
-			// calcul de la clef
-			$key = $this->lib->computeKey($path, $nameOrKey);
+		$recursive = false;
+		if ($this->getParam('R') !== null) {
+			$recursive = true;
 		}
 
-		//echo "getByKey : [$path] [$key]\n";
-		$file = $this->lib->getByKey($key);
+		// A-t-on passé une clef ou un chemin ?
+		$isFolder = false;
+		$key = $nameOrKey;
+		if (! $this->lib->isKey($nameOrKey)) {
+			// pas de clef - est-ce un dossier ou un fichier ?
+			if ($this->lib->isFolder($fullPath)) { // dossier
+				$isFolder = true;
+			} else { // fichier
+				// calcul de la clef
+				$key = $this->lib->computeKey($path, $nameOrKey);
+			}
+		}
 
-		if ($file == false) {
-			$this->sendError("file not found", 404);
+		// Va chercher, Lycos !
+		if ($isFolder) {
+			// détails du dossier
+			$files = $this->lib->getFolderContents($fullPath, $recursive);
+			$this->sendMultipleMixedResults($files);
 		} else {
-			$this->sendFile($file['storage_path'], $file['name'], $file['size'], $file['mimetype']);
+			//echo "getByKey : [$path] [$key]\n";
+			$file = $this->lib->getByKey($key);
+
+			if ($file == false) {
+				$this->sendError("file not found", 404);
+			} else {
+				$this->sendFile($file['storage_path'], $file['name'], $file['size'], $file['mimetype']);
+			}
 		}
 	}
 
