@@ -168,37 +168,44 @@ class CumulusService extends BaseService {
 		}
 
 		$firstResource = $this->resources[0];
-		// mode de récupération du/des fichiers
 		switch($firstResource) {
-			case "get-folders":
-				$this->getFolders();
-				break;
-			case "by-name":
-				$this->getByName();
-				break;
-			case "by-path":
-				$this->getByPath();
-				break;
-			case "by-keywords":
-				$this->getByKeywords();
-				break;
-			case "by-user":
-				$this->getByUser();
-				break;
-			case "by-groups":
-				$this->getByGroups();
-				break;
-			case "by-date":
-				$this->getByDate();
-				break;
-			case "by-mimetype":
-				$this->getByMimetype();
-				break;
-			case "by-license":
-				$this->getByLicense();
-				break;
-			case "search":
-				$this->search();
+			case 'api':
+				array_shift($this->resources);
+				$nextResource = $this->resources[0];
+				switch($nextResource) {
+					case "get-folders":
+						$this->getFolders();
+						break;
+					case "by-name":
+						$this->getByName();
+						break;
+					case "by-path":
+						$this->getByPath();
+						break;
+					case "by-keywords":
+						$this->getByKeywords();
+						break;
+					case "by-user":
+						$this->getByUser();
+						break;
+					case "by-groups":
+						$this->getByGroups();
+						break;
+					case "by-date":
+						$this->getByDate();
+						break;
+					case "by-mimetype":
+						$this->getByMimetype();
+						break;
+					case "by-license":
+						$this->getByLicense();
+						break;
+					case "search":
+						$this->search();
+						break;
+					default:
+						$this->usage();
+				}
 				break;
 			default:
 				$this->getByKeyOrCompletePath();
