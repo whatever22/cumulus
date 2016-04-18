@@ -1,5 +1,6 @@
 {
     "require": {
-		"telabotanica/tb-auth-php": "0.1.1a@dev"
+		"telabotanica/tb-auth-php": "0.1.1a@dev",
+        "telabotanica/tb-base-rest-service": "0.1a"
     }
 }

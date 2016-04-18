@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "2419994e44e5ef94fa7f20c676fe7678",
-    "content-hash": "d05507f1ec9722157fbde8ba0fe82bb7",
+    "hash": "c5e812228b50fcf69047f1adcb4c159c",
+    "content-hash": "946be11f75ccb23961d6fd3a0f7dfbae",
     "packages": [
         {
             "name": "telabotanica/tb-auth-php",
@@ -49,13 +49,58 @@
                 "telabotanica"
             ],
             "time": "2016-03-09 13:17:58"
+        },
+        {
+            "name": "telabotanica/tb-base-rest-service",
+            "version": "0.1a",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/telabotanica/tb-base-rest-service-php.git",
+                "reference": "e69c630d3c2b751e7e49647ce4e53e0894bff2de"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/telabotanica/tb-base-rest-service-php/zipball/e69c630d3c2b751e7e49647ce4e53e0894bff2de",
+                "reference": "e69c630d3c2b751e7e49647ce4e53e0894bff2de",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.5.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "BaseRestServiceTB": ""
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPLv3"
+            ],
+            "authors": [
+                {
+                    "name": "Mathias Chouet",
+                    "email": "mathias@tela-botanica.org"
+                }
+            ],
+            "description": "A simple PHP class that helps building REST webservices",
+            "homepage": "https://github.com/telabotanica/tb-base-rest-service",
+            "keywords": [
+                "rest",
+                "tela botanica",
+                "tela-botanica",
+                "telabotanica",
+                "webservice"
+            ],
+            "time": "2016-04-15 16:16:04"
         }
     ],
     "packages-dev": [],
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "telabotanica/tb-auth-php": 20
+        "telabotanica/tb-auth-php": 20,
+        "telabotanica/tb-base-rest-service": 15
     },
     "prefer-stable": false,
     "prefer-lowest": false,

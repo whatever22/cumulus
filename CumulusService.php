@@ -1,12 +1,11 @@
 <?php
 
-require_once 'BaseService.php';
 require_once 'Cumulus.php';
 
 /**
  * API REST pour le stockage de fichiers Cumulus
  */
-class CumulusService extends BaseService {
+class CumulusService extends BaseRestServiceTB {
 
 	/** Bibliothèque Cumulus */
 	protected $lib;
@@ -14,10 +13,21 @@ class CumulusService extends BaseService {
 	/** Autodocumentation en JSON */
 	public static $AUTODOC_PATH = "autodoc.json";
 
+	/** Configuration du service en JSON */
+	public static $CONFIG_PATH = "config/service.json";
+
 	/** Motif d'expression régulière pour détecter les références de fichiers */
 	public static $REF_PATTERN = '`https?://`';
 
 	public function __construct() {
+		// config
+		$config = null;
+		if (file_exists(self::$CONFIG_PATH)) {
+			$config = json_decode(file_get_contents(self::$CONFIG_PATH), true);
+		} else {
+			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
+		}
+
 		// lib Cumulus
 		$this->lib = new Cumulus();
 
@@ -25,7 +35,7 @@ class CumulusService extends BaseService {
 		// (pas de .htaccess)
 		header("X-Robots-Tag: noindex, nofollow", true);
 
-		parent::__construct();
+		parent::__construct($config);
 	}
 
 	/**
@@ -171,40 +181,44 @@ class CumulusService extends BaseService {
 		switch($firstResource) {
 			case 'api':
 				array_shift($this->resources);
-				$nextResource = $this->resources[0];
-				switch($nextResource) {
-					case "get-folders":
-						$this->getFolders();
-						break;
-					case "by-name":
-						$this->getByName();
-						break;
-					case "by-path":
-						$this->getByPath();
-						break;
-					case "by-keywords":
-						$this->getByKeywords();
-						break;
-					case "by-user":
-						$this->getByUser();
-						break;
-					case "by-groups":
-						$this->getByGroups();
-						break;
-					case "by-date":
-						$this->getByDate();
-						break;
-					case "by-mimetype":
-						$this->getByMimetype();
-						break;
-					case "by-license":
-						$this->getByLicense();
-						break;
-					case "search":
-						$this->search();
-						break;
-					default:
-						$this->usage();
+				if (count($this->resources) > 0) {
+					$nextResource = $this->resources[0];
+					switch($nextResource) {
+						case "get-folders":
+							$this->getFolders();
+							break;
+						case "by-name":
+							$this->getByName();
+							break;
+						case "by-path":
+							$this->getByPath();
+							break;
+						case "by-keywords":
+							$this->getByKeywords();
+							break;
+						case "by-user":
+							$this->getByUser();
+							break;
+						case "by-groups":
+							$this->getByGroups();
+							break;
+						case "by-date":
+							$this->getByDate();
+							break;
+						case "by-mimetype":
+							$this->getByMimetype();
+							break;
+						case "by-license":
+							$this->getByLicense();
+							break;
+						case "search":
+							$this->search();
+							break;
+						default:
+							$this->usage();
+					}
+				} else {
+					$this->usage();
 				}
 				break;
 			default:
