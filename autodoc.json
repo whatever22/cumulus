@@ -4,53 +4,55 @@
 		[
 			"GET __ROOTURI__clef",
 			"GET __ROOTURI__chemin/arbitraire/nom",
-			"Récupère le fichier identifié par clef, ou nommé nom et contenu dans le répertoire /chemin/arbitraire (déclenche son téléchargement)"
+			"Récupère le fichier identifié par clef, ou nommé nom et contenu dans le répertoire /chemin/arbitraire (déclenche son téléchargement)",
+			"GET __ROOTURI__chemin/arbitraire/dossier",
+			"Récupère le contenu du dossier identifié par le chemin, càd ses sous-dossiers et ses fichiers"
 		],
 		[
-			"GET __ROOTURI__by-name/compte rendu",
-			"GET __ROOTURI__by-name/compte rendu?LIKE (par défaut)",
-			"GET __ROOTURI__by-name/compte rendu?STRICT",
+			"GET __ROOTURI__api/by-name/compte rendu",
+			"GET __ROOTURI__api/by-name/compte rendu?LIKE (par défaut)",
+			"GET __ROOTURI__api/by-name/compte rendu?STRICT",
 			"Renvoie une liste de fichiers (les clefs et les attributs) correspondant au nom ou à la / aux portion(s) de nom fournie(s), quels que soient leurs emplacements"
 		],
 		[
-			"GET __ROOTURI__by-path/mon/super/chemin",
+			"GET __ROOTURI__api/by-path/mon/super/chemin",
 			"Renvoie une liste de fichiers (les clefs et les attributs) présents dans un dossier dont le chemin est /mon/super/chemin",
-			"GET __ROOTURI__by-path/mon/super/chemin?R",
+			"GET __ROOTURI__api/by-path/mon/super/chemin?R",
 			"Renvoie une liste de fichiers (les clefs et les attributs) présents dans un dossier dont le chemin est /mon/super/chemin ou un sous-dossier de celui-ci"
 		],
 		[
-			"GET __ROOTURI__by-keywords/foo",
-			"GET __ROOTURI__by-keywords/foo,bar,couscous",
-			"GET __ROOTURI__by-keywords/foo,bar,couscous?AND (par défaut)",
-			"GET __ROOTURI__by-keywords/foo,bar,couscous?OR",
+			"GET __ROOTURI__api/by-keywords/foo",
+			"GET __ROOTURI__api/by-keywords/foo,bar,couscous",
+			"GET __ROOTURI__api/by-keywords/foo,bar,couscous?AND (par défaut)",
+			"GET __ROOTURI__api/by-keywords/foo,bar,couscous?OR",
 			"Renvoie une liste de fichiers (les clefs et les attributs) correspondant à un ou plusieurs mots-clefs"
 		],
 		[
-			"GET __ROOTURI__by-user/jean-bernard@tela-botanica.org",
+			"GET __ROOTURI__api/by-user/jean-bernard@tela-botanica.org",
 			"Renvoie une liste de fichiers (les clefs et les attributs) appartenant à l'utilisateur jean-bernard@tela-botanica.org"
 		],
 		[
-			"GET __ROOTURI__by-group/botanique-à-bort-les-orgues",
+			"GET __ROOTURI__api/by-group/botanique-à-bort-les-orgues",
 			"Renvoie une liste de fichiers (les clefs et les attributs) appartenant au groupe \"botanique-à-bort-les-orgues\""
 		],
 		[
-			"GET __ROOTURI__by-mimetype/image/png",
+			"GET __ROOTURI__api/by-mimetype/image/png",
 			"Renvoie une liste de fichiers (les clefs et les attributs) ayant un type MIME \"image/png\""
 		],
 		[
-			"GET __ROOTURI__by-date/2015-02-04",
+			"GET __ROOTURI__api/by-date/2015-02-04",
 			"Renvoie une liste de fichiers (les clefs et les attributs) datant exactement du 04/02/2015",
-			"GET __ROOTURI__by-date/2015-02-04?BEFORE",
+			"GET __ROOTURI__api/by-date/2015-02-04?BEFORE",
 			"Renvoie une liste de fichiers (les clefs et les attributs) datant d'avant le 04/02/2015 (exclu)",
-			"GET __ROOTURI__by-date/2015-02-04?AFTER",
+			"GET __ROOTURI__api/by-date/2015-02-04?AFTER",
 			"Renvoie une liste de fichiers (les clefs et les attributs) datant d'après 04/02/2015 (exclu)",
-			"GET __ROOTURI__by-date/2014-07-13/2015-02-04",
+			"GET __ROOTURI__api/by-date/2014-07-13/2015-02-04",
 			"Renvoie une liste de fichiers (les clefs et les attributs) datant d'entre le 13/07/2014 et le 04/02/2015"
 		],
 		[
-			"GET __ROOTURI__search/foo,bar",
+			"GET __ROOTURI__api/search/foo,bar",
 			"Recherche floue parmi les noms et les mots-clefs",
-			"GET __ROOTURI__search?keywords=foo,bar&user=jean-bernard@tela-botanica.org&date=...",
+			"GET __ROOTURI__api/search?keywords=foo,bar&user=jean-bernard@tela-botanica.org&date=...",
 			"Recherche avancée"
 		],
 		[
