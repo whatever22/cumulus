@@ -407,11 +407,17 @@ class StockageTB implements CumulusInterface {
 			throw new Exception('storage: no path specified');
 		}
 
+		// préparation du chemin
+		$pathLike = rtrim($path, '/') . '/%';
+		$path = $this->quote($path);
+		$pathLike = $this->quote($pathLike);
+
 		// clauses
-		$clause = "path = '$path'";
+		$clause = "path = $path";
 		if ($recursive === true) {
-			$clause = '(' . $clause . " OR path LIKE '$path/%'" . ')';
+			$clause = '(' . $clause . " OR path LIKE $pathLike" . ')';
 		}
+		echo "CLAUSE: [$clause]"; exit;
 		// vérification des droits
 		$clause .= " AND " . $this->getRightsCheckingClause();
 
