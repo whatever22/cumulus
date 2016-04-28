@@ -35,6 +35,12 @@ switch($action) {
 		throw new Exception('une action déclarée dans $actions devrait avoir un "case" correspondant dans le "switch"');
 }
 
+/**
+ * Lit toutes les entrées de fichiers de la base de données et analyse le
+ * fichier associé sur le disque, pour en extraire le mimetype et la taille;
+ * met à jour l'entrée de fichier (utile après une migration de fichiers depuis
+ * une autre BDD)
+ */
 function reconstruire_mimetype_et_taille($argc, $argv) {
 	global $bdCumulus;
 
