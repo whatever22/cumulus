@@ -1,6 +1,6 @@
 {
 	"storageAdapter": "StockageTB",
-	"authAdapter": "AuthTB",
+	"authAdapter": "AuthProxyTB",
 	"adapters": {
 		"StockageTB": {
 			"db": {
