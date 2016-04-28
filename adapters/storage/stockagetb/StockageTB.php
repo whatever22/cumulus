@@ -417,7 +417,6 @@ class StockageTB implements CumulusInterface {
 		if ($recursive === true) {
 			$clause = '(' . $clause . " OR path LIKE $pathLike" . ')';
 		}
-		echo "CLAUSE: [$clause]"; exit;
 		// vérification des droits
 		$clause .= " AND " . $this->getRightsCheckingClause();
 
