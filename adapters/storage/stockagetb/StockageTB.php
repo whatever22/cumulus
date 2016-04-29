@@ -998,13 +998,11 @@ class StockageTB implements CumulusInterface {
 		if (empty($key)) {
 			throw new Exception('storage: no key specified');
 		}
-		$key = $this->quote($key);
 
-		//requête
-		$q = "DELETE FROM cumulus_files WHERE fkey = '$key'";
-		$r = $this->db->exec($q);
+		$sql = 'DELETE FROM cumulus_files WHERE fkey = ' . $this->quote($key);
+		$result = $this->db->exec($sql);
 
-		return $r;
+		return $result;
 	}
 
 	/**

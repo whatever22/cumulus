@@ -42,19 +42,15 @@ class CumulusService extends BaseRestServiceTB {
 	 * Renvoie plusieurs résultats $results dans un objet JSON, en remplaçant
 	 * les chemins de stockage par des liens de téléchargement
 	 */
-	protected function sendMultipleResults($results, $errorMessage="no results", $errorCode=404) {
-		if ($results == false) {
-			$this->sendError($errorMessage, $errorCode);
-		} else {
-			// création des liens de téléchargement
-			$this->buildLinksAndRemoveStoragePaths($results);
-			$this->sendJson(
-				array(
-					"count" => count($results),
-					"results" => $results
-				)
-			);
-		}
+	protected function sendMultipleResults($results) {
+		// création des liens de téléchargement
+		$this->buildLinksAndRemoveStoragePaths($results);
+		$this->sendJson(
+			array(
+				"count" => count($results),
+				"results" => $results
+			)
+		);
 	}
 
 	/**
@@ -679,22 +675,27 @@ class CumulusService extends BaseRestServiceTB {
 				$jsonData = json_decode($requestBody, true);
 
 				// extraction des paramètres
+			 	$file = $this->getParam('file', null, $jsonData);
+				$newname = $this->getParam('newname', null, $jsonData);
+				$newpath = $this->getParam('newpath', null, $jsonData);
 				$keywords = $this->getParam('keywords', null, $jsonData);
 				$groups = $this->getParam('groups', null, $jsonData);
 				$permissions = $this->getParam('permissions', null, $jsonData);
 				$license = $this->getParam('license', null, $jsonData);
 				$meta = $this->getParam('meta', null, $jsonData);
 
-				// détection : fichier ou référence (URL) ?
-				if (! empty($jsonData['file']) && (preg_match(self::$REF_PATTERN, $jsonData['file']) != false)) {
-					// référence
-					$file = array(
-						'url' => $jsonData['file'],
-						'size' => count($jsonData['file'])
-					);
-				} else {
-					// copie du contenu base64 dans un fichier temporaire
-					$file = $this->copyBase64ToTmpFile($jsonData['file']);
+			 	if ($file) {
+					// détection : fichier ou référence (URL) ?
+					if (! empty($jsonData['file']) && (preg_match(self::$REF_PATTERN, $jsonData['file']) != false)) {
+						// référence
+						$file = array(
+							'url' => $jsonData['file'],
+							'size' => count($jsonData['file'])
+						);
+					} else {
+						// copie du contenu base64 dans un fichier temporaire
+						$file = $this->copyBase64ToTmpFile($jsonData['file']);
+					}
 				}
 			} else { // fichier dans le corps de la requête
 				$file = $this->copyRequestBodyToTmpFile();
@@ -734,20 +735,6 @@ class CumulusService extends BaseRestServiceTB {
 		}
 	}
 
-	/**
-	 * Renvoie les attributs d'un fichier, mais pas le fichier lui-même
-	 */
-	protected function options() {
-		$key = array_pop($this->resources);
-
-		//echo "options : [$key]\n";
-		$file = $this->lib->getAttributesByKey($key);
-
-		if ($file == false) {
-			$this->sendError("file not found", 404);
-		} else {
-			$this->buildLinkAndRemoveStoragePath($file);
-			$this->sendJson($file);
-		}
-	}
+	// Faudrait une interface
+	protected function options() {}
 }
