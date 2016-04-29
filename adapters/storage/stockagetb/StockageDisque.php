@@ -79,6 +79,7 @@ class StockageDisque {
 	 */
 	public function renommerFichier($ancienChemin, $ancienNom, $nouveauChemin, $nouveauNom) {
 		// préparation du dossier de destination
+		$ancienChemin = $this->preparerCheminDossier($ancienChemin);
 		$nouveauChemin = $this->preparerCheminDossier($nouveauChemin);
 
 		$ancienCheminComplet = $ancienChemin . $ancienNom;
