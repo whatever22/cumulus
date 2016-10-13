@@ -25,7 +25,7 @@ class CumulusService extends BaseRestServiceTB {
 		if (file_exists(self::$CONFIG_PATH)) {
 			$config = json_decode(file_get_contents(self::$CONFIG_PATH), true);
 		} else {
-			throw new Exception("file " . self::$CHEMIN_CONFIG . " doesn't exist");
+			throw new Exception("file " . self::$CONFIG_PATH . " doesn't exist");
 		}
 
 		// lib Cumulus
