@@ -262,7 +262,9 @@ class CumulusService extends BaseRestServiceTB {
 		// A-t-on passé une clef ou un chemin ?
 		$isFolder = false;
 		$key = $nameOrKey;
-		if (! $this->lib->isKey($nameOrKey)) {
+		// A key cannot be passed along with a path
+		$isAKey = ($path == '/' && $this->lib->isKey($nameOrKey));
+		if (! $isAKey) {
 			// pas de clef - est-ce un dossier ou un fichier ?
 			if ($this->lib->isFolder($fullPath)) { // dossier
 				$isFolder = true;
