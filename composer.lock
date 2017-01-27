@@ -4,21 +4,21 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "c5e812228b50fcf69047f1adcb4c159c",
-    "content-hash": "946be11f75ccb23961d6fd3a0f7dfbae",
+    "hash": "48f52e4eef2e9276abdcf0f847084927",
+    "content-hash": "6014247deeb7967986a6653fc5903635",
     "packages": [
         {
             "name": "telabotanica/tb-auth-php",
-            "version": "0.1.1a",
+            "version": "0.1.7",
             "source": {
                 "type": "git",
                 "url": "https://github.com/telabotanica/tb-auth-php.git",
-                "reference": "661b50f7a34f52d6fc347e10a9b21441da8a1438"
+                "reference": "235846889f89b45a920eabe8f65bfbede19ecf42"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/telabotanica/tb-auth-php/zipball/661b50f7a34f52d6fc347e10a9b21441da8a1438",
-                "reference": "661b50f7a34f52d6fc347e10a9b21441da8a1438",
+                "url": "https://api.github.com/repos/telabotanica/tb-auth-php/zipball/235846889f89b45a920eabe8f65bfbede19ecf42",
+                "reference": "235846889f89b45a920eabe8f65bfbede19ecf42",
                 "shasum": ""
             },
             "require": {
@@ -48,7 +48,7 @@
                 "tela-botanica",
                 "telabotanica"
             ],
-            "time": "2016-03-09 13:17:58"
+            "time": "2017-01-27 11:29:25"
         },
         {
             "name": "telabotanica/tb-base-rest-service",
@@ -99,7 +99,6 @@
     "aliases": [],
     "minimum-stability": "stable",
     "stability-flags": {
-        "telabotanica/tb-auth-php": 20,
         "telabotanica/tb-base-rest-service": 15
     },
     "prefer-stable": false,
