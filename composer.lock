@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "48f52e4eef2e9276abdcf0f847084927",
-    "content-hash": "6014247deeb7967986a6653fc5903635",
+    "hash": "9bd20d37728e74e7b399b9f29d73573f",
+    "content-hash": "f7037a554b83d68e1aae35d11ab886a5",
     "packages": [
         {
             "name": "telabotanica/tb-auth-php",
