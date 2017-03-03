@@ -17,6 +17,9 @@
 			"admins": [
 				"john@stuff.org"
 			],
+			"adminRoles": [
+				"cumulus_admin"
+			],
 			"ignoreSSLIssues": false,
 			"headerName": "Authorization"
 		}
