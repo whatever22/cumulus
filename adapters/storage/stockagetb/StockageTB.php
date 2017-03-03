@@ -144,6 +144,10 @@ class StockageTB implements CumulusInterface {
 	 * l'utilisateur sur le jeu de données en train d'être requêté
 	 */
 	protected function getRightsCheckingClause() {
+		// si l'utilisateur est admin, on montre tout
+		if ($this->authAdapter->isAdmin()) {
+			return '1'; // SQL true
+		}
 		// caractéristiques de l'utilisateur
 		$currentUserId = $this->authAdapter->getUserId();
 		$currentUserGroups = $this->authAdapter->getUserGroups();
