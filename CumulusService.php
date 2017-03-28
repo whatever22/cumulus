@@ -40,9 +40,20 @@ class CumulusService extends BaseRestServiceTB {
 
 	/**
 	 * Renvoie plusieurs résultats $results dans un objet JSON, en remplaçant
-	 * les chemins de stockage par des liens de téléchargement
+	 * les chemins de stockage par des liens de téléchargement; si /dl est
+	 * ajouté à la fin de l'URL et si les résultats ne contenaient qu'un
+	 * document, celui-ci est téléchargé automatiquement
 	 */
 	protected function sendMultipleResults($results) {
+		// si /dl est ajouté à la fin de l'URL, et si la liste de résultats
+		// contient un seul document, téléchargement direct du document
+		if (count($this->resources) > 0 && count($results) == 1) {
+			$lastResource = array_pop($this->resources);
+			if ($lastResource == 'dl') {
+				$file = $results[0];
+				$this->sendFile($file['storage_path'], $file['name'], $file['size'], $file['mimetype']);
+			}
+		}
 		// création des liens de téléchargement
 		$this->buildLinksAndRemoveStoragePaths($results);
 		$this->sendJson(
