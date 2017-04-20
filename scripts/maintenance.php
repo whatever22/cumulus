@@ -2,7 +2,7 @@
 
 require_once "config.php";
 
-$actions = array("reconstruire_mimetype_et_taille");
+$actions = array("reconstruire_mimetype_et_taille", "detecter_doublons");
 
 function usage() {
 	global $argv;
@@ -31,8 +31,69 @@ switch($action) {
 	case "reconstruire_mimetype_et_taille":
 		reconstruire_mimetype_et_taille($argc, $argv);
 		break;
+	case "detecter_doublons":
+		detecter_doublons($argc, $argv);
+		break;
 	default:
 		throw new Exception('une action déclarée dans $actions devrait avoir un "case" correspondant dans le "switch"');
+}
+
+// Cherche des doublons dans la base de données : deux ou plusieurs fichiers
+// ayant exactement le même chemin et le même nom (incluant l'extension);
+// affiche un rapport avec les différences
+function detecter_doublons($argc, $argv) {
+	global $bdCumulus;
+
+	// les "COLLATE" servent à être sensible à la casse
+	$reqDoub = "SELECT * FROM cumulus_files "
+		. "WHERE (path COLLATE utf8_bin, name COLLATE utf8_bin) IN "
+		. "(SELECT path, name FROM cumulus_files GROUP BY path COLLATE utf8_bin, name COLLATE utf8_bin HAVING count(fkey) > 1) "
+		. "ORDER BY path, name";
+
+	$resDoub = $bdCumulus->query($reqDoub);
+	$doublons = array();
+	$nbDoublons = 0;
+	$nbFichiers = 0;
+	$nbDossiers = 0;
+	// organisation préliminaire (on sait jamais, si les résultats arrivent dans
+	// le désordre)
+	while ($ligne = $resDoub->fetch()) {
+		if (! isset($doublons[$ligne['path']])) {
+			$doublons[$ligne['path']] = array();
+			$nbDossiers++;
+		}
+		if (! isset($doublons[$ligne['path']][$ligne['name']])) {
+			$doublons[$ligne['path']][$ligne['name']] = array();
+			$nbFichiers++;
+		}
+		// pour cette paire chemin / nom, une occurrence (doublon) de plus
+		$doublons[$ligne['path']][$ligne['name']][] = $ligne;
+		$nbDoublons ++;
+	}
+
+	// affichage sympatoche
+	//var_dump($doublons);
+	foreach ($doublons as $dossier => $fichiers) {
+		echo "==== $dossier ====" . PHP_EOL;
+		echo "> " . count($fichiers) . " fichier(s)" . PHP_EOL;
+		foreach ($fichiers as $fichier => $occurrences) {
+			echo "  == $fichier ==" . PHP_EOL;
+			echo "  > " . count($occurrences) . " occurrence(s)" . PHP_EOL;
+			foreach ($occurrences as $oc) {
+				// mise en avant des différences
+				echo "  " . $oc['fkey'] . " :" . PHP_EOL;
+				foreach ($oc as $k => $v) {
+					if (!is_numeric($k)) {
+						echo "    [$k] => $v" . PHP_EOL;
+					}
+				}
+			}
+		}
+	}
+
+	// résumé
+	echo "--------------------------------------------------------------" . PHP_EOL;
+	echo ($nbDoublons - $nbFichiers) . " doublons trouvé(s) pour $nbFichiers fichier(s) dans $nbDossiers dossier(s)" . PHP_EOL;
 }
 
 /**
