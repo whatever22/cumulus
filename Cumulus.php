@@ -65,6 +65,13 @@ class Cumulus implements CumulusInterface {
 	}
 
 	/**
+	 * Retourne le chemin racine du stockage de fichiers
+	 */
+	public function getStoragePath() {
+		return $this->storageAdapter->getStoragePath();
+	}
+
+	/**
 	 * Si $inverse est true, indique à l'adapteur que les critères de recherche
 	 * devront être inversés
 	 */
