@@ -26,6 +26,13 @@ class StockageDisque {
 	}
 
 	/**
+	 * Retourne le chemin racine du stockage de fichiers
+	 */
+	public function racineStockage() {
+		return $this->racine_stockage;
+	}
+
+	/**
 	 * Supprime le fichier $chemin du disque
 	 * @param type $chemin
 	 * @return type

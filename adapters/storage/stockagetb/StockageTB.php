@@ -49,6 +49,13 @@ class StockageTB implements CumulusInterface {
 	}
 
 	/**
+	 * Retourne le chemin racine du stockage de fichiers
+	 */
+	public function getStoragePath() {
+		return $this->diskStorage->racineStockage();
+	}
+
+	/**
 	 * Adapteur d'authentification / gestion des droits
 	 */
 	public function setAuthAdapter($adapter) {

@@ -2,7 +2,7 @@
 
 require_once "config.php";
 
-$actions = array("reconstruire_mimetype_et_taille", "detecter_doublons");
+$actions = array("importer_nouveaux_fichiers", "reconstruire_mimetype_et_taille", "detecter_doublons");
 
 function usage() {
 	global $argv;
@@ -28,6 +28,9 @@ $bdCumulus->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
 // action en fonction du 1er argument de la ligne de commande
 switch($action) {
+	case "importer_nouveaux_fichiers":
+		importer_nouveaux_fichiers($argc, $argv);
+		break;
 	case "reconstruire_mimetype_et_taille":
 		reconstruire_mimetype_et_taille($argc, $argv);
 		break;
@@ -139,4 +142,188 @@ function reconstruire_mimetype_et_taille($argc, $argv) {
 	// résumé
 	echo "$cptUpd fichiers mis à jour\n";
 	echo "$cptIgn fichiers ignorés\n";
+}
+
+// Parcourt le dossier de stockage à la recherche de fichiers n'étant pas
+// présents dans la base de données, et les importe.
+// Utile pour importer de nouveaux fichiers en conservant leur chemin d'origine.
+// 
+// si $argv[0] contient un chemin commençant à la racine du dossier de stockage
+// (ex: "equipe/intranet/"), seul ce dossier sera analysé
+function importer_nouveaux_fichiers($argc, $argv) {
+	global $bdCumulus;
+	global $racineStockage;
+
+	if ($argc == 0) {
+		echo "Utilisation: importer_nouveaux_fichiers /chemin/du/dossier [options]" . PHP_EOL;
+		echo "Pour analyser l'ensemble du dossier de stockage, saisir \"/\" comme chemin de dossier" . PHP_EOL;
+		echo "options : suite de clef=valeur séparées par des \"&\", pour indiquer les métadonnées par défaut" . PHP_EOL;
+		echo "\tex: \"owner=123&groups=mon groupe,un_autre-groupe&permissions=--\"" . PHP_EOL;
+		echo "\tclefs disponibles:" . PHP_EOL;
+		echo "\t- owner" . PHP_EOL;
+		echo "\t- groups" . PHP_EOL;
+		echo "\t- permissions" . PHP_EOL;
+		echo "\t- keywords" . PHP_EOL;
+		echo "\t- license" . PHP_EOL;
+		exit;
+	}
+	// traitement des options
+	$options = [];
+	if ($argc > 1) {
+		$optionsTmp = $argv[1];
+		$optionsTmp = explode('&', $optionsTmp);
+		foreach ($optionsTmp as $opt) {
+			$kv = explode('=', $opt);
+			$val = $kv[1];
+			/*if (strpos($val, ',') !== false) {
+				$val = explode(',', $val);
+			}*/
+			$options[$kv[0]] = $val;
+		}
+	}
+
+	require_once __DIR__ . '/../Cumulus.php';
+	$lib = new Cumulus();
+
+	$cheminStockage = $lib->getStoragePath();
+	$cheminStockage = rtrim($cheminStockage, "/");
+	$cheminAbsDossier = $cheminStockage;
+
+	$cheminDossier = $argv[0];
+	$cheminDossier = trim($cheminDossier, "/");
+	if ($cheminDossier != '') {
+		$cheminDossier = '/' . $cheminDossier;
+	}
+	$cheminAbsDossier .= $cheminDossier;
+
+	if (!is_dir($cheminAbsDossier)) {
+		throw new Exception("[$cheminAbsDossier] n'existe pas ou n'est pas un dossier");
+	}
+	if (!is_readable($cheminAbsDossier)) {
+		throw new Exception("impossible de lire le dossier [$cheminAbsDossier]");
+	}
+
+	$nbFichiers = 0;
+	$nbDossiers = 0;
+	$nbSucces = 0;
+	$nbErreurs = 0;
+	importer_un_dossier($cheminStockage, $cheminDossier, $lib, $bdCumulus, $options, $nbFichiers, $nbDossiers, $nbSucces, $nbErreurs);
+
+	echo $nbDossiers . " dossier(s) / $nbFichiers fichier(s) analysé(s)" . PHP_EOL;
+	if ($nbSucces + $nbErreurs == 0) {
+		echo "Rien à importer" . PHP_EOL;
+	} else {
+		echo "$nbSucces fichier(s) importé(s) / $nbErreurs erreur(s) sur " . ($nbSucces + $nbErreurs) . " tentative(s)" . PHP_EOL;
+	}
+}
+
+// parcourt un dossier à importer, récursivement
+function importer_un_dossier($cheminStockage, $cheminDossier, $lib, $bdCumulus, $options, &$nbFichiers, &$nbDossiers, &$nbSucces, &$nbErreurs) {
+	// parcours du dossier
+	$cheminAbsDossier = $cheminStockage . '/' . $cheminDossier;
+	$d = opendir($cheminAbsDossier);
+	while ($f = readdir($d)) {
+		if ($f == "." || $f == "..") continue;
+		// chemin relatif du fichier
+		$cheminFichier = $cheminDossier . '/' . $f;
+		$cheminAbsFichier = $cheminStockage . '/' . $cheminFichier;
+		// dossier ?
+		if (is_dir($cheminAbsFichier)) {
+			importer_un_dossier($cheminStockage, $cheminFichier, $lib, $bdCumulus, $options, $nbFichiers, $nbDossiers, $nbSucces, $nbErreurs);
+		} else { // fichier
+			$nbFichiers++;
+			//echo "Trouvé un fichier : [$cheminFichier]\n";
+			traiter_fichier($cheminStockage, $cheminFichier, $f, $lib, $bdCumulus, $options, $nbSucces, $nbErreurs);
+		}
+	}
+	$nbDossiers++;
+}
+
+// lors du parcours d'un dossier à importer, traite un fichier : vérifie s'il
+// est connu dans la BDD, et si ce n'est pas le cas, l'importe
+function traiter_fichier($cheminStockage, $cheminFichier, $f, $lib, $bdCumulus, $options, &$nbSucces, &$nbErreurs) {
+	$reqExist = "SELECT count(*) as existe "
+		. "FROM cumulus_files "
+		. "WHERE path COLLATE utf8_bin = " . $bdCumulus->quote(dirname($cheminFichier)) . "AND name COLLATE utf8_bin = " . $bdCumulus->quote($f);
+	//var_dump($reqExist);
+	$resExist = $bdCumulus->query($reqExist);
+	if (! $resExist) {
+		// erreur BDD
+		$nbErreurs++;
+		return false;
+	}
+	$resExist = $resExist->fetch();
+	if (! $resExist) {
+		// erreur WTF
+		$nbErreurs++;
+		return false;
+	}
+	if ($resExist['existe'] == 0) {
+		$cheminAbsFichier = $cheminStockage . $cheminFichier;
+		echo "> import de [$cheminFichier]" . PHP_EOL;
+
+		// mimetype
+		$finfo = finfo_open(FILEINFO_MIME_TYPE);
+		$mimetype = finfo_file($finfo, $cheminAbsFichier);
+		finfo_close($finfo);
+		// taille
+		$taille = filesize($cheminAbsFichier);
+		// last_modification_date
+		$last_modification_date = date('Y-m-d H:i:s', filemtime($cheminAbsFichier));
+		// creation_date
+		// filectime risque de retourner une date très récente si on vient de
+		// copier-coller le fichier, alors on prend plutôt le filemtime
+		$creation_date = $last_modification_date;
+
+		// owner
+		$owner = null;
+		if (! empty($options['owner'])) $owner = $options['owner'];
+		// groups
+		$groups = null;
+		if (! empty($options['groups'])) $groups = $options['groups'];
+		// permissions
+		$permissions = 'ww';
+		if (! empty($options['permissions'])) $permissions = $options['permissions'];
+		// keywords
+		$keywords = null;
+		if (! empty($options['keywords'])) $keywords = $options['keywords'];
+		// license
+		$license = null;
+		if (! empty($options['license'])) $license = $options['license'];
+
+		// meta
+		$meta = json_encode([
+			"importe_par" => "script maintenance",
+			"date_import" => date("Y-m-d")
+		]);
+
+		// fkey
+		$fkey = $lib->computeKey(dirname($cheminFichier), $f);
+
+		$reqIns = "INSERT INTO cumulus_files VALUES ("
+			. $bdCumulus->quote($fkey) . ', '
+			. $bdCumulus->quote($f) . ', '
+			. $bdCumulus->quote(dirname($cheminFichier)) . ', '
+			. $bdCumulus->quote($cheminAbsFichier) . ', '
+			. $bdCumulus->quote($mimetype) . ', '
+			. $bdCumulus->quote($taille) . ', '
+			. $bdCumulus->quote($owner) . ', '
+			. $bdCumulus->quote($groups) . ', '
+			. $bdCumulus->quote($permissions) . ', '
+			. $bdCumulus->quote($keywords) . ', '
+			. $bdCumulus->quote($license) . ', '
+			. $bdCumulus->quote($meta) . ', '
+			. $bdCumulus->quote($creation_date) . ', '
+			. $bdCumulus->quote($last_modification_date)
+			. ")";
+
+		$ok = $bdCumulus->exec($reqIns);
+		if ($ok) {
+			$nbSucces++;
+		} else {
+			$nbErreurs++;
+		}
+	}
+
+	return true;
 }

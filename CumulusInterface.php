@@ -12,6 +12,11 @@ interface CumulusInterface {
 	const COLUMN_CREATION_DATE = "creation_date";
 
 	/**
+	 * Retourne le chemin racine du stockage de fichiers
+	 */
+	public function getStoragePath();
+
+	/**
 	 * Adapteur d'authentification / gestion des droits (doit être facultatif)
 	 */
 	public function setAuthAdapter($adapter);
