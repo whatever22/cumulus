@@ -218,7 +218,7 @@ function importer_nouveaux_fichiers($argc, $argv) {
 }
 
 // parcourt un dossier à importer, récursivement
-function importer_un_dossier($cheminStockage, $cheminDossier, &$lib, &$bdCumulus, &$options, &$nbFichiers, &$nbDossiers, &$nbSucces, &$nbErreurs) {
+function importer_un_dossier($cheminStockage, $cheminDossier, $lib, $bdCumulus, $options, &$nbFichiers, &$nbDossiers, &$nbSucces, &$nbErreurs) {
 	// parcours du dossier
 	$cheminAbsDossier = $cheminStockage . '/' . $cheminDossier;
 	$d = opendir($cheminAbsDossier);
@@ -241,7 +241,7 @@ function importer_un_dossier($cheminStockage, $cheminDossier, &$lib, &$bdCumulus
 
 // lors du parcours d'un dossier à importer, traite un fichier : vérifie s'il
 // est connu dans la BDD, et si ce n'est pas le cas, l'importe
-function traiter_fichier($cheminStockage, $cheminFichier, $f, &$lib, &$bdCumulus, &$options, &$nbSucces, &$nbErreurs) {
+function traiter_fichier($cheminStockage, $cheminFichier, $f, $lib, $bdCumulus, $options, &$nbSucces, &$nbErreurs) {
 	$reqExist = "SELECT count(*) as existe "
 		. "FROM cumulus_files "
 		. "WHERE path COLLATE utf8_bin = " . $bdCumulus->quote(dirname($cheminFichier)) . "AND name COLLATE utf8_bin = " . $bdCumulus->quote($f);
