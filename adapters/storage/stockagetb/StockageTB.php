@@ -327,12 +327,14 @@ class StockageTB implements CumulusInterface {
 
 		// requête
 		if ($recursive === true) {
-			$q = "SELECT DISTINCT path as folder_path,"
-				. "SUBSTR(path, LENGTH($path)+1) as folder "
+			$q = "SELECT path as folder_path,"
+				. "SUBSTR(path, LENGTH($path)+1) as folder, "
+				. "SUM(size) as size, "
+				. "MAX(last_modification_date) as last_modification_date "
 				. "FROM cumulus_files "
 				. "WHERE path LIKE $pathLike";
 		} else {
-			$q = "SELECT DISTINCT IF("
+			$q = "SELECT IF("
 				. "LOCATE('/', path, LENGTH($path)+1) = 0,"
 				. "path,"
 				. "SUBSTR(path, 1, LOCATE('/', path, LENGTH($path)+1) - 1)"
@@ -340,17 +342,18 @@ class StockageTB implements CumulusInterface {
 				. "LOCATE('/', path, LENGTH($path)+1) = 0,"
 				. "SUBSTR(path, LENGTH($path)+1),"
 				. "SUBSTR(path, LENGTH($path)+1, LOCATE('/', path, LENGTH($path)+1) - LENGTH($path) - 1)"
-				. ") as folder "
+				. ") as folder, "
+				. "SUM(size) as size, "
+				. "MAX(last_modification_date) as last_modification_date "
 				. "FROM cumulus_files "
 				. "WHERE path LIKE $pathLike";
 		}
 		// vérification des droits
 		$q .= " AND " . $this->getRightsCheckingClause();
 		// tri
+		$q .= " GROUP BY folder_path";
 		$q .= " ORDER BY folder";
 
-		//echo $q;
-		//exit;
 		$r = $this->db->query($q);
 		if ($r != false) {
 			$data = $r->fetchAll();
@@ -358,7 +361,9 @@ class StockageTB implements CumulusInterface {
 			foreach($data as $d) {
 				$formattedData[] = array(
 					'folder' => $d['folder_path'],
-					'name' => $d['folder']
+					'name' => $d['folder'],
+					'size' => $d['size'],
+					'last_modification_date' => $d['last_modification_date']
 				);
 			}
 			return $formattedData;
