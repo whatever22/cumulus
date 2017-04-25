@@ -152,7 +152,6 @@ function reconstruire_mimetype_et_taille($argc, $argv) {
 // (ex: "equipe/intranet/"), seul ce dossier sera analysé
 function importer_nouveaux_fichiers($argc, $argv) {
 	global $bdCumulus;
-	global $racineStockage;
 
 	if ($argc == 0) {
 		echo "Utilisation: importer_nouveaux_fichiers /chemin/du/dossier [options]" . PHP_EOL;
@@ -223,7 +222,7 @@ function importer_un_dossier($cheminStockage, $cheminDossier, $lib, $bdCumulus, 
 	$cheminAbsDossier = $cheminStockage . '/' . $cheminDossier;
 	$d = opendir($cheminAbsDossier);
 	while ($f = readdir($d)) {
-		if ($f == "." || $f == "..") continue;
+		if (substr($f, 0, 1) == ".") continue; // les fichiers et dossiers cachés sont ignorés (., .., .svn, .git, .htaccesss etc.)
 		// chemin relatif du fichier
 		$cheminFichier = $cheminDossier . '/' . $f;
 		$cheminAbsFichier = $cheminStockage . '/' . $cheminFichier;
