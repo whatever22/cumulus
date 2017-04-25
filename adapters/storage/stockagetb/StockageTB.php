@@ -1,6 +1,7 @@
 <?php
 
-require 'StockageDisque.php';
+require_once 'StockageDisque.php';
+require_once __DIR__ . '/../../../CumulusExceptions.php';
 
 /**
  * Adapteur par défaut de la couche de stockage de Cumulus - utilise une base de
@@ -250,7 +251,7 @@ class StockageTB implements CumulusInterface {
 
 		if ($hasNoRights) {
 			// vous n'avez pas les droits
-			throw new Exception("storage: insufficent permissions");
+			throw new PermissionsException("storage: insufficient permissions");
 		} // sinon tout va bien
 	}
 

@@ -1,6 +1,7 @@
 <?php
 
 require_once 'Cumulus.php';
+require_once 'CumulusExceptions.php';
 
 /**
  * API REST pour le stockage de fichiers Cumulus
@@ -229,7 +230,13 @@ class CumulusService extends BaseRestServiceTB {
 				}
 				break;
 			default:
-				$this->getByKeyOrCompletePath();
+				try {
+					$this->getByKeyOrCompletePath();
+				} catch (PermissionsException $pe) {
+					// Traite les exceptions dues aux permissions séparément pour générer un code
+					// HTTP 401 propre; renvoie la gestion des autres exceptions à BaseRestServiceTB
+					$this->sendError($pe->getMessage(), 401);
+				}
 		}
 	}
 
