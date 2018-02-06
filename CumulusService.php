@@ -262,7 +262,7 @@ class CumulusService extends BaseRestServiceTB {
 	/**
 	 * GET http://tb.org/cumulus.php/clef
 	 * GET http://tb.org/cumulus.php/chemin/arbitraire/nom.ext
-	 * 
+	 *
 	 * Récupère le fichier identifié par clef ou par le couple chemin / nom
 	 * (déclenche son téléchargement); si le chemin désigne un dossier, renvoie
 	 * le descriptif du dossier: liste des fichiers et des sous-dossiers
@@ -312,7 +312,7 @@ class CumulusService extends BaseRestServiceTB {
 	/**
 	 * GET http://tb.org/cumulus.php/get-folders/root/path
 	 * GET http://tb.org/cumulus.php/get-folders/root/path?R
-	 * 
+	 *
 	 * Renvoie une liste de dossiers se trouvant sous "/root/path"; si ?R est
 	 * utilisé, renvoie aussi leurs sous-dossiers
 	 */
@@ -335,7 +335,7 @@ class CumulusService extends BaseRestServiceTB {
 	 * GET http://tb.org/cumulus.php/by-name/compte rendu
 	 * GET http://tb.org/cumulus.php/by-name/compte rendu?LIKE (par défaut)
 	 * GET http://tb.org/cumulus.php/by-name/compte rendu?STRICT
-	 * 
+	 *
 	 * Renvoie une liste de fichiers (les clefs et les attributs) correspondant
 	 * au nom ou à la / aux portion(s) de nom fournie(s), quels que soient leurs
 	 * emplacements
@@ -359,11 +359,11 @@ class CumulusService extends BaseRestServiceTB {
 	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin
 	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
 	 * un dossier dont le chemin est /mon/super/chemin
-	 * 
+	 *
 	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin?R
 	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
 	 * un dossier dont le chemin est /mon/super/chemin ou un sous-dossier
-	 * 
+	 *
 	 * GET http://tb.org/cumulus.php/by-path/mon/super/chemin?FOLDERS
 	 * Renvoie une liste de fichiers (les clefs et les attributs) présents dans
 	 * un dossier dont le chemin est /mon/super/chemin ou un sous-dossier et y
@@ -393,7 +393,7 @@ class CumulusService extends BaseRestServiceTB {
 	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous
 	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous?AND (par défaut)
 	 * GET http://tb.org/cumulus.php/by-keywords/foo,bar,couscous?OR
-	 * 
+	 *
 	 * Renvoie une liste de fichiers (les clefs et les attributs) correspondant
 	 * à un ou plusieurs mots-clefs
 	 */
@@ -412,7 +412,7 @@ class CumulusService extends BaseRestServiceTB {
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-groups/botanique-à-bort-les-orgues
-	 * 
+	 *
 	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant au
 	 * groupe "botanique-à-bort-les-orgues"
 	 */
@@ -431,7 +431,7 @@ class CumulusService extends BaseRestServiceTB {
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-user/jean-bernard@tela-botanica.org
-	 * 
+	 *
 	 * Renvoie une liste de fichiers (les clefs et les attributs) appartenant à
 	 * l'utilisateur jean-bernard@tela-botanica.org
 	 */
@@ -446,7 +446,7 @@ class CumulusService extends BaseRestServiceTB {
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-mimetype/image/png
-	 * 
+	 *
 	 * Renvoie une liste de fichiers (les clefs et les attributs) ayant un type MIME "image/png"
 	 */
 	protected function getByMimetype() {
@@ -462,7 +462,7 @@ class CumulusService extends BaseRestServiceTB {
 
 	/**
 	 * GET http://tb.org/cumulus.php/by-license/CC-BY-SA
-	 * 
+	 *
 	 * Renvoie une liste de fichiers (les clefs et les attributs) ayant une
 	 * licence CC-BY-SA
 	 */
@@ -479,15 +479,15 @@ class CumulusService extends BaseRestServiceTB {
 	 * GET http://tb.org/cumulus.php/by-date/2015-02-04
 	 * Renvoie une liste de fichiers (les clefs et les attributs) datant
 	 * exactement du 04/02/2015
-	 * 
+	 *
 	 * GET http://tb.org/cumulus.php/by-date/2015-02-04?BEFORE
 	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'avant
 	 * le 04/02/2015 (exclu)
-	 * 
+	 *
 	 * GET http://tb.org/cumulus.php/by-date/2015-02-04?AFTER
 	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'après
 	 * le 04/02/2015 (exclu)
-	 * 
+	 *
 	 * GET http://tb.org/cumulus.php/by-date/2014-07-13/2015-02-04
 	 * Renvoie une liste de fichiers (les clefs et les attributs) datant d'entre
 	 * le 13/07/2014 et le 04/02/2015
@@ -530,7 +530,7 @@ class CumulusService extends BaseRestServiceTB {
 	/**
 	 * GET http://tb.org/cumulus.php/search/foo,bar
 	 * Recherche floue parmi les noms et les mots-clefs
-	 * 
+	 *
 	 * GET http://tb.org/cumulus.php/search?keywords=foo,bar&user=jean-bernard@tela-botanica.org&date=...
 	 * Recherche avancée
 	 */
@@ -563,9 +563,107 @@ class CumulusService extends BaseRestServiceTB {
 	/**
 	 * Écrase ou modifie les attributs d'un fichier existant, et renvoie les
 	 * attributs
+	 * @todo: DRY this by! Redundanct with part of post() code
 	 */
 	protected function put() {
-		$this->sendError("PUT is not supported at the moment", 405);
+ 		$key = array_pop($this->resources);
+ 		$path = '/' . implode('/', $this->resources);
+ 		$existingFile = $this->lib->getByKey($key);
+ 		// si la référence du fichier n'existe pas déjà dans la bdd
+ 		if ($existingFile == false || ! $this->lib->isKey($key)) {
+ 			$this->sendError('Resource with ID ' + $key + ' not found', 404);
+ 		}
+
+		$requestBody = $this->readRequestBody();
+		$jsonData = json_decode($requestBody, true);
+
+
+		$name = array_key_exists('name', $jsonData) ? $jsonData['name'] : $existingFile['name'];
+		$path = array_key_exists('path', $jsonData) ? $jsonData['path'] : $existingFile['path'];
+		$permissions = array_key_exists('permissions', $jsonData) ? $jsonData['permissions'] : $existingFile['permissions'];
+		$license = array_key_exists('license', $jsonData) ? $jsonData['license'] : $existingFile['license'];
+		$meta = array_key_exists('meta', $jsonData) ? $jsonData['meta'] : $existingFile['meta'];
+ 		$keywords = $this->explode(',', $this->getParam('keywords'));
+		if (!$keywords) {
+			$keywords = $existingFile['keywords'];
+		}
+ 		$groups = $this->explode(',', $this->getParam('groups'));
+		if (!$groups) {
+			$groups = $existingFile['groups'];
+		}
+
+ 		$file = false;
+ 		$serverContentType = '';
+ 		if (! empty($_SERVER["CONTENT_TYPE"])) {
+ 			$serverContentType = $_SERVER["CONTENT_TYPE"];
+ 		}
+ 		// détection de la méthode d'envoi
+ 		$isMPFD = strtolower(substr($serverContentType, 0, 19)) == 'multipart/form-data';
+ 		if ($isMPFD) { // envoi de formulaire classique avec multipart/form-data
+ 			// détection : fichier ou référence (URL) ?
+ 			if (! empty($_FILES['file'])) {
+ 				// fichier uploadé
+ 				$file = $_FILES['file'];
+ 			} else {
+ 				// référence sur fichier
+ 				$fileParam = $this->getParam('file');
+ 				if (preg_match(self::$REF_PATTERN, $fileParam) != false) {
+ 					// référence
+ 					$file = array(
+ 						'url' => $fileParam,
+ 						'size' => count($fileParam)
+ 					);
+ 				} // sinon pas de fichier spécifié => modif de métadonnées
+ 			}
+ 		} else {
+ 			$isJSON = strtolower(substr($serverContentType, 0, 16)) == 'application/json';
+ 			if ($isJSON) { // fichier en base64 dans le paramètre "file"
+ 			 	if ($file) {
+ 					// détection : fichier ou référence (URL) ?
+ 					if (! empty($jsonData['file']) && (preg_match(self::$REF_PATTERN, $jsonData['file']) != false)) {
+ 						// référence
+ 						$file = array(
+ 							'url' => $jsonData['file'],
+ 							'size' => count($jsonData['file'])
+ 						);
+ 					} else {
+ 						// copie du contenu base64 dans un fichier temporaire
+ 						$file = $this->copyBase64ToTmpFile($jsonData['file']);
+ 					}
+ 				}
+ 			} else { // fichier dans le corps de la requête
+ 				$file = $this->copyRequestBodyToTmpFile();
+ 			}
+ 		}
+
+ 		$info = false;
+ 		if ($file == null) {
+ 			// mise à jour métadonnées seulement
+ 			$info = $this->lib->updateByKey($key, $name, $path, $keywords, $groups, $permissions, $license, $meta);
+ 		} else {
+ 			// ajout / mise à jour de fichier
+ 			$info = $this->lib->addOrUpdateFile($file, $path, $nameOrKey, $keywords, $groups, $permissions, $license, $meta);
+ 		}
+
+ 		if ($info == false) {
+ 			$this->sendError("error while sending file");
+ 		} else {
+ 			$this->buildLinkAndRemoveStoragePath($info);
+ 			$this->sendJson($info);
+ 		}
+  }
+
+  protected function options() {
+    header('Allow: GET,POST,PUT,PATCH,DELETE,OPTIONS');
+	  exit;
+  }
+
+	/**
+	 * Écrase ou modifie partiellement les attributs d'un fichier existant, et renvoie les
+	 * attributs
+	 */
+	protected function patch() {
+		$this->put();
 	}
 
 	/**
@@ -755,6 +853,6 @@ class CumulusService extends BaseRestServiceTB {
 		}
 	}
 
-	// Faudrait une interface
-	protected function options() {}
+
 }
+
