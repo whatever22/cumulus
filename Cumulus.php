@@ -16,6 +16,7 @@ class Cumulus implements CumulusInterface {
 	protected $config = array();
 	public static $CHEMIN_CONFIG = "config/config.json";
 
+
 	/** Implémentation de la lib de stockage par un adapteur */
 	protected $storageAdapter;
 
@@ -63,6 +64,12 @@ class Cumulus implements CumulusInterface {
 	public function setAuthAdapter($adapter) {
 		$this->storageAdapter->setAuthAdapter($adapter);
 	}
+
+
+	public function createNewFolder($folderName, $path)  {
+		return $this->storageAdapter->createNewFolder($folderName, $path);
+	}
+
 
 	/**
 	 * Retourne le chemin racine du stockage de fichiers

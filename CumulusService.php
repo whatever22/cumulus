@@ -743,6 +743,7 @@ class CumulusService extends BaseRestServiceTB {
 	 * n'est spécifié, modifie les métadonnées de la clef ciblée
 	 */
 	protected function post() {
+
 		$nameOrKey = array_pop($this->resources);
 		$path = '/' . implode('/', $this->resources);
 
@@ -768,6 +769,7 @@ class CumulusService extends BaseRestServiceTB {
 		if (! empty($_SERVER["CONTENT_TYPE"])) {
 			$serverContentType = $_SERVER["CONTENT_TYPE"];
 		}
+
 		// détection de la méthode d'envoi
 		$isMPFD = strtolower(substr($serverContentType, 0, 19)) == 'multipart/form-data';
 		if ($isMPFD) { // envoi de formulaire classique avec multipart/form-data
@@ -822,8 +824,9 @@ class CumulusService extends BaseRestServiceTB {
 
 		$info = false;
 		if ($file == null) {
+			
 			// mise à jour métadonnées seulement
-			$info = $this->lib->updateByKey($key, $newname, $newpath, $keywords, $groups, $permissions, $license, $meta);
+			$info = $this->lib->createNewFolder($nameOrKey, $path);
 		} else {
 			// ajout / mise à jour de fichier
 			$info = $this->lib->addOrUpdateFile($file, $path, $nameOrKey, $keywords, $groups, $permissions, $license, $meta);
@@ -855,4 +858,3 @@ class CumulusService extends BaseRestServiceTB {
 
 
 }
-
