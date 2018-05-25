@@ -825,7 +825,7 @@ class CumulusService extends BaseRestServiceTB {
 		$info = false;
 		if ($file == null) {
 			
-			// mise à jour métadonnées seulement
+			// création d'un répertoire
 			$info = $this->lib->createNewFolder($nameOrKey, $path);
 		} else {
 			// ajout / mise à jour de fichier
